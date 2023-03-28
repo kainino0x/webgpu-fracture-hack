@@ -1,0 +1,10 @@
+{
+  "name": "fracture",
+  "version": "0.0.1",
+  "description": "",
+  "author": "Kai Ninomiya <kainino@chromium.org>",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "babylonjs": "^5.52.0"
+  }
+}
