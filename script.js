@@ -2,6 +2,9 @@
 const B = BABYLON;
 
 async function createScene(engine, canvas) {
+  // Extract the GPUDevice
+  const device = engine._device;
+
   // Setup basic scene
   const scene = new B.Scene(engine);
   const camera = new B.ArcRotateCamera('camera1', 0, 1, 10, B.Vector3.Zero(), scene);
@@ -25,6 +28,9 @@ async function createScene(engine, canvas) {
   cube1.position.y += 3;
   makeIndependentPhysicsObject(scene, cube1);
   cube1.physicsImpostor.setLinearVelocity(new B.Vector3(0.5, 0.5, 0.5));
+  for (const node of breadthFirstTraverse(cube1)) {
+    if (node.value instanceof GPUBuffer) console.log('found GPUBuffer at cube1.' + node.path.join('.'));
+  }
 
   // (proof of concept) create another mesh from the same data
   setTimeout(() => {
@@ -47,6 +53,25 @@ function makeIndependentPhysicsObject(scene, mesh) {
   mesh.setParent(null);
   mesh.physicsImpostor = new B.PhysicsImpostor(mesh, B.PhysicsImpostor.MeshImpostor, { mass: 1.0 }, scene);
 };
+
+function* breadthFirstTraverse(root) {
+  const visited = new Set();
+  const queue = [{ value: root, path: [] }];
+  while (queue.length) {
+    const node = queue.shift();
+    yield node;
+
+    for (const [k, child] of Object.entries(node.value)) {
+      if (!child || typeof child !== 'object') continue;
+      if (child.buffer instanceof ArrayBuffer) continue;
+
+      if (visited.has(child)) continue;
+      visited.add(child);
+
+      queue.push({ value: child, path: [...node.path, k] });
+    }
+  }
+}
 
 {
   await Ammo();
