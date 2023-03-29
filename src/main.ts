@@ -1,9 +1,9 @@
 /// <reference types="babylonjs" />
 const B = BABYLON;
 
-async function createScene(engine, canvas) {
+async function createScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement) {
   // Extract the GPUDevice
-  const device = engine._device;
+  const device = (engine as any)._device as GPUDevice;
 
   // Setup basic scene
   const scene = new B.Scene(engine);
@@ -16,7 +16,11 @@ async function createScene(engine, canvas) {
   scene.enablePhysics(new B.Vector3(0, -10, 0), new B.AmmoJSPlugin());
 
   // Create ground collider
-  const ground = B.MeshBuilder.CreateGround('ground1', { width: 6, height: 6, subdivisions: 2 }, scene);
+  const ground = B.MeshBuilder.CreateGround(
+    'ground1',
+    { width: 6, height: 6, subdivisions: 2 },
+    scene
+  );
   ground.physicsImpostor = new B.PhysicsImpostor(
     ground,
     B.PhysicsImpostor.BoxImpostor,
@@ -27,14 +31,15 @@ async function createScene(engine, canvas) {
   const cube1 = B.MeshBuilder.CreateBox('cube1', { size: 1 }, scene);
   cube1.position.y += 3;
   makeIndependentPhysicsObject(scene, cube1);
-  cube1.physicsImpostor.setLinearVelocity(new B.Vector3(0.5, 0.5, 0.5));
+  cube1.physicsImpostor!.setLinearVelocity(new B.Vector3(0.5, 0.5, 0.5));
   for (const node of breadthFirstTraverse(cube1)) {
-    if (node.value instanceof GPUBuffer) console.log('found GPUBuffer at cube1.' + node.path.join('.'));
+    if (node.value instanceof GPUBuffer)
+      console.log('found GPUBuffer at cube1.' + node.path.join('.'));
   }
 
   // (proof of concept) create another mesh from the same data
   setTimeout(() => {
-    const vdata = new B.VertexData()
+    const vdata = new B.VertexData();
     vdata.indices = cube1.getIndices();
     vdata.positions = cube1.getVerticesData(B.VertexBuffer.PositionKind);
     vdata.normals = cube1.getVerticesData(B.VertexBuffer.NormalKind);
@@ -43,22 +48,27 @@ async function createScene(engine, canvas) {
 
     cube2.position.y += 3;
     makeIndependentPhysicsObject(scene, cube2);
-    cube2.physicsImpostor.setLinearVelocity(new B.Vector3(0.5, 0.5, 0.5));
+    cube2.physicsImpostor!.setLinearVelocity(new B.Vector3(0.5, 0.5, 0.5));
   }, 1000);
 
   return scene;
 }
 
-function makeIndependentPhysicsObject(scene, mesh) {
+function makeIndependentPhysicsObject(scene: BABYLON.Scene, mesh: BABYLON.Mesh) {
   mesh.setParent(null);
-  mesh.physicsImpostor = new B.PhysicsImpostor(mesh, B.PhysicsImpostor.MeshImpostor, { mass: 1.0 }, scene);
-};
+  mesh.physicsImpostor = new B.PhysicsImpostor(
+    mesh,
+    B.PhysicsImpostor.MeshImpostor,
+    { mass: 1.0 },
+    scene
+  );
+}
 
-function* breadthFirstTraverse(root) {
+function* breadthFirstTraverse(root: object) {
   const visited = new Set();
-  const queue = [{ value: root, path: [] }];
-  while (queue.length) {
-    const node = queue.shift();
+  const queue = [{ value: root, path: [] as string[] }];
+  let node;
+  while ((node = queue.shift())) {
     yield node;
 
     for (const [k, child] of Object.entries(node.value)) {
@@ -73,10 +83,11 @@ function* breadthFirstTraverse(root) {
   }
 }
 
+declare const Ammo: any;
 {
   await Ammo();
 
-  const canvas = document.getElementById('renderCanvas');
+  const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement;
 
   const engine = new B.WebGPUEngine(canvas);
   await engine.initAsync();

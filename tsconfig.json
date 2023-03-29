@@ -1,0 +1,16 @@
+{
+  "extends": "./node_modules/gts/tsconfig-google.json",
+  "compilerOptions": {
+    "lib": ["dom", "es2020"],
+    "module": "esnext",
+    "moduleDetection": "force",
+    "target": "esnext",
+    "strict": true,
+    "skipLibCheck": true,
+    "rootDir": "src",
+    "outDir": "out",
+    "incremental": true,
+    "composite": true
+  },
+  "include": ["src/**/*.ts"]
+}
