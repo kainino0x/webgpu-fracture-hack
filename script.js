@@ -48,7 +48,7 @@ function makeIndependentPhysicsObject(scene, mesh) {
   mesh.physicsImpostor = new B.PhysicsImpostor(mesh, B.PhysicsImpostor.MeshImpostor, { mass: 1.0 }, scene);
 };
 
-(async () => {
+{
   await Ammo();
 
   const canvas = document.getElementById('renderCanvas');
@@ -63,4 +63,4 @@ function makeIndependentPhysicsObject(scene, mesh) {
   engine.runRenderLoop(() => {
     scene.render();
   });
-})();
+}
