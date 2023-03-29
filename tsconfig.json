@@ -10,7 +10,8 @@
     "rootDir": "src",
     "outDir": "out",
     "incremental": true,
-    "composite": true
+    "composite": true,
+    "allowUnreachableCode": true,
   },
   "include": ["src/**/*.ts"]
 }

@@ -1,0 +1,15 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "npm",
+			"script": "start",
+			"problemMatcher": [],
+			"label": "npm: start",
+			"detail": "concurrently 'tsc --watch' 'live-server --host=127.0.0.1 --port=8555 --no-browser'",
+			"group": {
+				"kind": "build",
+			}
+		}
+	]
+}

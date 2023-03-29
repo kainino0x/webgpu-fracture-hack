@@ -1,5 +1,5 @@
-/// <reference types="babylonjs" />
-const B = BABYLON;
+import { testTransform } from './fracture.js';
+import { B, makeIndependentPhysicsObject } from './helper.js';
 async function createScene(engine, canvas) {
     // Extract the GPUDevice
     const device = engine._device;
@@ -24,21 +24,9 @@ async function createScene(engine, canvas) {
     }
     // (proof of concept) create another mesh from the same data
     setTimeout(() => {
-        const vdata = new B.VertexData();
-        vdata.indices = cube1.getIndices();
-        vdata.positions = cube1.getVerticesData(B.VertexBuffer.PositionKind);
-        vdata.normals = cube1.getVerticesData(B.VertexBuffer.NormalKind);
-        const cube2 = new B.Mesh('cube2', scene);
-        vdata.applyToMesh(cube2);
-        cube2.position.y += 3;
-        makeIndependentPhysicsObject(scene, cube2);
-        cube2.physicsImpostor.setLinearVelocity(new B.Vector3(0.5, 0.5, 0.5));
+        testTransform({ scene, device, original: cube1 });
     }, 1000);
     return scene;
-}
-function makeIndependentPhysicsObject(scene, mesh) {
-    mesh.setParent(null);
-    mesh.physicsImpostor = new B.PhysicsImpostor(mesh, B.PhysicsImpostor.MeshImpostor, { mass: 1.0 }, scene);
 }
 function* breadthFirstTraverse(root) {
     const visited = new Set();
@@ -71,5 +59,4 @@ function* breadthFirstTraverse(root) {
         scene.render();
     });
 }
-export {};
 //# sourceMappingURL=main.js.map
