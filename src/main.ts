@@ -1,5 +1,5 @@
 import { testTransform } from './fracture.js';
-import { makeIndependentPhysicsObject } from './helper.js';
+import { makeFragmentFromVertices, makeIndependentPhysicsObject } from './helper.js';
 
 async function createScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement) {
   // Extract the GPUDevice
@@ -7,7 +7,7 @@ async function createScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement) {
 
   // Setup basic scene
   const scene = new BABYLON.Scene(engine);
-  const camera = new BABYLON.ArcRotateCamera('camera1', 0, 1, 10, BABYLON.Vector3.Zero(), scene);
+  const camera = new BABYLON.ArcRotateCamera('camera1', -0.5, 1, 10, BABYLON.Vector3.Zero(), scene);
   camera.attachControl(canvas, true);
   const light = new BABYLON.HemisphericLight('light1', new BABYLON.Vector3(0, 1, 0), scene);
   light.intensity = 0.7;
@@ -28,18 +28,31 @@ async function createScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement) {
     scene
   );
 
-  const cube1 = BABYLON.MeshBuilder.CreateBox('cube1', { size: 1 }, scene);
-  cube1.position.y += 3;
-  makeIndependentPhysicsObject(scene, cube1);
-  cube1.physicsImpostor!.setLinearVelocity(new BABYLON.Vector3(0.5, 0.5, 0.5));
-  for (const node of breadthFirstTraverse(cube1)) {
+    const cubePositions = /* prettier-ignore */ [
+      -.5,-.5,-.5,   -.5, .5, .5,   -.5,-.5, .5,
+       .5, .5,-.5,   -.5, .5,-.5,   -.5,-.5,-.5,
+       .5,-.5, .5,    .5,-.5,-.5,   -.5,-.5,-.5,
+       .5, .5,-.5,   -.5,-.5,-.5,    .5,-.5,-.5,
+      -.5,-.5,-.5,   -.5, .5,-.5,   -.5, .5, .5,
+       .5,-.5, .5,   -.5,-.5,-.5,   -.5,-.5, .5,
+      -.5, .5, .5,    .5,-.5, .5,   -.5,-.5, .5,
+       .5, .5, .5,    .5, .5,-.5,    .5,-.5,-.5,
+       .5,-.5,-.5,    .5,-.5, .5,    .5, .5, .5,
+       .5, .5, .5,   -.5, .5,-.5,    .5, .5,-.5,
+       .5, .5, .5,   -.5, .5, .5,   -.5, .5,-.5,
+       .5, .5, .5,    .5,-.5, .5,   -.5, .5, .5,
+    ];
+  const cube = makeFragmentFromVertices(scene, 'cube', cubePositions);
+  cube.position.y += 3;
+  cube.physicsImpostor!.setLinearVelocity(new BABYLON.Vector3(0.5, 0.5, 0.5));
+  for (const node of breadthFirstTraverse(cube)) {
     if (node.value instanceof GPUBuffer)
       console.log('found GPUBuffer at cube1.' + node.path.join('.'));
   }
 
   // (proof of concept) create another mesh from the same data
   setTimeout(() => {
-    testTransform({ scene, device, original: cube1 });
+    testTransform({ scene, device, original: cube });
   }, 1000);
 
   return scene;
