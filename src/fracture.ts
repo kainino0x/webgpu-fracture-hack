@@ -1,6 +1,6 @@
 import { makeFragmentFromVertices, makeIndependentPhysicsObject } from './helper.js';
 
-export function testTransform({
+export async function testTransform({
   scene,
   device,
   original,
@@ -8,7 +8,7 @@ export function testTransform({
   scene: BABYLON.Scene;
   device: GPUDevice;
   original: BABYLON.Mesh;
-}): void {
+}): Promise<void> {
   const origPositions = original.getVerticesData(BABYLON.VertexBuffer.PositionKind)!;
 
   let idx = 0;

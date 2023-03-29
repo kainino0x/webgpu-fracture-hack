@@ -1,5 +1,5 @@
 import { makeFragmentFromVertices } from './helper.js';
-export function testTransform({ scene, device, original, }) {
+export async function testTransform({ scene, device, original, }) {
     const origPositions = original.getVerticesData(BABYLON.VertexBuffer.PositionKind);
     let idx = 0;
     const half = Math.floor(origPositions.length / 2);

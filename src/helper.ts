@@ -17,7 +17,7 @@ export function makeIndependentPhysicsObject(scene: BABYLON.Scene, mesh: BABYLON
   mesh.setParent(null);
   mesh.physicsImpostor = new BABYLON.PhysicsImpostor(
     mesh,
-    BABYLON.PhysicsImpostor.MeshImpostor,
+    BABYLON.PhysicsImpostor.ConvexHullImpostor, // Or MeshImpostor?
     { mass: 1.0 },
     scene
   );
