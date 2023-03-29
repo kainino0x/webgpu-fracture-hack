@@ -26,6 +26,20 @@ async function createScene(engine, canvas) {
   makeIndependentPhysicsObject(scene, cube1);
   cube1.physicsImpostor.setLinearVelocity(new B.Vector3(0.5, 0.5, 0.5));
 
+  // (proof of concept) create another mesh from the same data
+  setTimeout(() => {
+    const vdata = new B.VertexData()
+    vdata.indices = cube1.getIndices();
+    vdata.positions = cube1.getVerticesData(B.VertexBuffer.PositionKind);
+    vdata.normals = cube1.getVerticesData(B.VertexBuffer.NormalKind);
+    const cube2 = new B.Mesh('cube2', scene);
+    vdata.applyToMesh(cube2);
+
+    cube2.position.y += 3;
+    makeIndependentPhysicsObject(scene, cube2);
+    cube2.physicsImpostor.setLinearVelocity(new B.Vector3(0.5, 0.5, 0.5));
+  }, 1000);
+
   return scene;
 }
 
