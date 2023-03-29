@@ -9,7 +9,8 @@
     "lint": "gts lint",
     "fix": "gts fix",
     "clean": "gts clean",
-    "compile": "tsc"
+    "compile": "tsc",
+    "refresh": "rm -rf tsconfig.tsbuildinfo ./out/ && tsc && git add out"
   },
   "dependencies": {
     "babylonjs": "5.52.0"
