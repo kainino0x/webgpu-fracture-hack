@@ -1,23 +1,23 @@
 import { testTransform } from './fracture.js';
-import { B, makeIndependentPhysicsObject } from './helper.js';
+import { makeIndependentPhysicsObject } from './helper.js';
 async function createScene(engine, canvas) {
     // Extract the GPUDevice
     const device = engine._device;
     // Setup basic scene
-    const scene = new B.Scene(engine);
-    const camera = new B.ArcRotateCamera('camera1', 0, 1, 10, B.Vector3.Zero(), scene);
+    const scene = new BABYLON.Scene(engine);
+    const camera = new BABYLON.ArcRotateCamera('camera1', 0, 1, 10, BABYLON.Vector3.Zero(), scene);
     camera.attachControl(canvas, true);
-    const light = new B.HemisphericLight('light1', new B.Vector3(0, 1, 0), scene);
+    const light = new BABYLON.HemisphericLight('light1', new BABYLON.Vector3(0, 1, 0), scene);
     light.intensity = 0.7;
     // Enable physics
-    scene.enablePhysics(new B.Vector3(0, -10, 0), new B.AmmoJSPlugin());
+    scene.enablePhysics(new BABYLON.Vector3(0, -10, 0), new BABYLON.AmmoJSPlugin());
     // Create ground collider
-    const ground = B.MeshBuilder.CreateGround('ground1', { width: 6, height: 6, subdivisions: 2 }, scene);
-    ground.physicsImpostor = new B.PhysicsImpostor(ground, B.PhysicsImpostor.BoxImpostor, { mass: 0, friction: 0.5, restitution: 0.7 }, scene);
-    const cube1 = B.MeshBuilder.CreateBox('cube1', { size: 1 }, scene);
+    const ground = BABYLON.MeshBuilder.CreateGround('ground1', { width: 6, height: 6, subdivisions: 2 }, scene);
+    ground.physicsImpostor = new BABYLON.PhysicsImpostor(ground, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, friction: 0.5, restitution: 0.7 }, scene);
+    const cube1 = BABYLON.MeshBuilder.CreateBox('cube1', { size: 1 }, scene);
     cube1.position.y += 3;
     makeIndependentPhysicsObject(scene, cube1);
-    cube1.physicsImpostor.setLinearVelocity(new B.Vector3(0.5, 0.5, 0.5));
+    cube1.physicsImpostor.setLinearVelocity(new BABYLON.Vector3(0.5, 0.5, 0.5));
     for (const node of breadthFirstTraverse(cube1)) {
         if (node.value instanceof GPUBuffer)
             console.log('found GPUBuffer at cube1.' + node.path.join('.'));
@@ -49,7 +49,7 @@ function* breadthFirstTraverse(root) {
 {
     await Ammo();
     const canvas = document.getElementById('renderCanvas');
-    const engine = new B.WebGPUEngine(canvas);
+    const engine = new BABYLON.WebGPUEngine(canvas);
     await engine.initAsync();
     window.addEventListener('resize', () => {
         engine.resize();
