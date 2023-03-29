@@ -5,7 +5,7 @@
   "author": "Kai Ninomiya <kainino@chromium.org>",
   "license": "UNLICENSED",
   "scripts": {
-    "start": "concurrently 'tsc --watch' 'http-server -a127.0.0.1 -p8555'",
+    "start": "concurrently 'tsc --watch' 'live-server --host=127.0.0.1 --port=8555 --no-browser --watch=index.html,out'",
     "lint": "gts lint",
     "fix": "gts fix",
     "clean": "gts clean",
@@ -18,6 +18,7 @@
     "concurrently": "^8.0.1",
     "gts": "^3.1.1",
     "http-server": "^14.1.1",
+    "live-server": "^1.2.2",
     "typescript": "~4.7.0"
   }
 }
