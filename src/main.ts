@@ -1,10 +1,7 @@
-import { testTransform } from './fracture.js';
+import { TestTransform } from './fracture.js';
 import { makeFragmentFromVertices  } from './helper.js';
 
 async function createScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement) {
-  // Extract the GPUDevice
-  const device = (engine as any)._device as GPUDevice;
-
   // Setup basic scene
   const scene = new BABYLON.Scene(engine);
   const camera = new BABYLON.ArcRotateCamera('camera1', -0.5, 1, 20, BABYLON.Vector3.Zero(), scene);
@@ -52,8 +49,9 @@ async function createScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement) {
   }
 
   // (proof of concept) create another mesh from the same data
+  const tt = new TestTransform(scene);
   setTimeout(() => {
-    testTransform({ scene, device, original: cube });
+    void tt.transform(cube);
   }, 1000);
 
   return scene;
