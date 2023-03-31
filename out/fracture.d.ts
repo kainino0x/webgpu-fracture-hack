@@ -6,7 +6,10 @@ declare abstract class Transform {
     abstract transform(original: BABYLON.Mesh): Promise<void>;
 }
 export declare class TestTransform extends Transform {
-    constructor(scene: BABYLON.Scene);
+    config: GPUBuffer;
+    pipeline: GPUComputePipeline;
+    layout: GPUBindGroupLayout;
+    static Create(scene: BABYLON.Scene): Promise<TestTransform>;
     transform(original: BABYLON.Mesh): Promise<void>;
 }
 export {};

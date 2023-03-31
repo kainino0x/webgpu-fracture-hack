@@ -1,5 +1,5 @@
 import { TestTransform } from './fracture.js';
-import { makeFragmentFromVertices  } from './helper.js';
+import { makeFragmentFromVertices } from './helper.js';
 
 async function createScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement) {
   // Setup basic scene
@@ -26,7 +26,7 @@ async function createScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement) {
   );
 
   const cubePositions =
-    /* prettier-ignore */ [
+    /* prettier-ignore */ new Float32Array([
     -1,-1,-1,   -1, 1, 1,   -1,-1, 1,
      1, 1,-1,   -1, 1,-1,   -1,-1,-1,
      1,-1, 1,    1,-1,-1,   -1,-1,-1,
@@ -39,7 +39,7 @@ async function createScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement) {
      1, 1, 1,   -1, 1,-1,    1, 1,-1,
      1, 1, 1,   -1, 1, 1,   -1, 1,-1,
      1, 1, 1,    1,-1, 1,   -1, 1, 1,
-  ];
+  ]);
   const cube = makeFragmentFromVertices(scene, 'cube', cubePositions);
   cube.position.y += 3;
   cube.physicsImpostor!.setLinearVelocity(new BABYLON.Vector3(0.5, 0.5, 0.5));
@@ -49,7 +49,7 @@ async function createScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement) {
   }
 
   // (proof of concept) create another mesh from the same data
-  const tt = new TestTransform(scene);
+  const tt = await TestTransform.Create(scene);
   setTimeout(() => {
     void tt.transform(cube);
   }, 1000);

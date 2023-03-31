@@ -1,4 +1,5 @@
 /// <reference types="babylonjs" />
+/// <reference types="@webgpu/types" />
 export function makeFragmentFromVertices(scene, name, positions) {
     const mesh = new BABYLON.Mesh(name, scene);
     {
@@ -11,9 +12,16 @@ export function makeFragmentFromVertices(scene, name, positions) {
     makeIndependentPhysicsObject(scene, mesh);
     return mesh;
 }
+let material;
 export function makeIndependentPhysicsObject(scene, mesh) {
+    if (!material) {
+        material = new BABYLON.StandardMaterial("material", scene);
+        material.diffuseColor = new BABYLON.Color3(1, 0, 0);
+        material.backFaceCulling = false;
+    }
     mesh.setParent(null);
     mesh.physicsImpostor = new BABYLON.PhysicsImpostor(mesh, BABYLON.PhysicsImpostor.ConvexHullImpostor, // Or MeshImpostor?
     { mass: 1.0 }, scene);
+    mesh.material = material;
 }
 //# sourceMappingURL=helper.js.map

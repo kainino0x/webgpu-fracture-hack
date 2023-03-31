@@ -13,7 +13,7 @@ async function createScene(engine, canvas) {
     const ground = BABYLON.MeshBuilder.CreateGround('ground1', { width: 12, height: 12, subdivisions: 0 }, scene);
     ground.physicsImpostor = new BABYLON.PhysicsImpostor(ground, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, friction: 0.5, restitution: 0.7 }, scene);
     const cubePositions = 
-    /* prettier-ignore */ [
+    /* prettier-ignore */ new Float32Array([
         -1, -1, -1, -1, 1, 1, -1, -1, 1,
         1, 1, -1, -1, 1, -1, -1, -1, -1,
         1, -1, 1, 1, -1, -1, -1, -1, -1,
@@ -26,7 +26,7 @@ async function createScene(engine, canvas) {
         1, 1, 1, -1, 1, -1, 1, 1, -1,
         1, 1, 1, -1, 1, 1, -1, 1, -1,
         1, 1, 1, 1, -1, 1, -1, 1, 1,
-    ];
+    ]);
     const cube = makeFragmentFromVertices(scene, 'cube', cubePositions);
     cube.position.y += 3;
     cube.physicsImpostor.setLinearVelocity(new BABYLON.Vector3(0.5, 0.5, 0.5));
@@ -35,7 +35,7 @@ async function createScene(engine, canvas) {
             console.log('found GPUBuffer at cube.' + node.path.join('.'));
     }
     // (proof of concept) create another mesh from the same data
-    const tt = new TestTransform(scene);
+    const tt = await TestTransform.Create(scene);
     setTimeout(() => {
         void tt.transform(cube);
     }, 1000);

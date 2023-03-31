@@ -16,6 +16,7 @@
     "babylonjs": "5.52.0"
   },
   "devDependencies": {
+    "@webgpu/types": "0.1.30",
     "concurrently": "^8.0.1",
     "gts": "^3.1.1",
     "http-server": "^14.1.1",
