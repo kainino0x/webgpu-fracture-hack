@@ -1,4 +1,4 @@
-import { TestTransform } from './fracture.js';
+import { FractureTransform, TestTransform } from './fracture.js';
 import { makeFragmentFromVertices } from './helper.js';
 async function createScene(engine, canvas) {
     // Setup basic scene
@@ -34,10 +34,12 @@ async function createScene(engine, canvas) {
         if (node.value instanceof GPUBuffer)
             console.log('found GPUBuffer at cube.' + node.path.join('.'));
     }
-    // (proof of concept) create another mesh from the same data
-    const tt = await TestTransform.Create(scene);
+    const testTransform = await TestTransform.Create(scene);
+    const transform = await FractureTransform.Create(scene);
     setTimeout(() => {
-        void tt.transform(cube);
+        ////////////////////////////////////////////////////////////////////////////////// SWITCH HERE
+        void testTransform.transform(cube);
+        //void transform.transform(cube);
     }, 1000);
     return scene;
 }

@@ -1,5 +1,5 @@
 export declare function assert(condition: boolean): asserts condition;
-declare type TypedArrayBufferView = Float32Array | Uint8Array;
+export declare type TypedArrayBufferView = Float32Array | Uint8Array | Int32Array;
 export declare function memcpy(src: {
     src: ArrayBuffer | TypedArrayBufferView;
     start?: number;
@@ -8,4 +8,3 @@ export declare function memcpy(src: {
     dst: ArrayBuffer | TypedArrayBufferView;
     start?: number;
 }): void;
-export {};

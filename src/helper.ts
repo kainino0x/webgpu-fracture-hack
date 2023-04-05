@@ -1,5 +1,7 @@
-/// <reference types="babylonjs" />
+// @webgpu/types must be first, or babylonjs's definitions of the WebGPU types
+// will take precedent (and they're not as strict).
 /// <reference types="@webgpu/types" />
+/// <reference types="babylonjs" />
 
 export function makeFragmentFromVertices(scene: BABYLON.Scene, name: string, positions: BABYLON.FloatArray) {
   const mesh = new BABYLON.Mesh(name, scene);
