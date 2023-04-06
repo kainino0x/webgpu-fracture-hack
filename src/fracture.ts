@@ -358,7 +358,7 @@ export class FractureTransform extends Transform {
         const pass = enc.beginComputePass();
         pass.setPipeline(this.copyPipeline);
         pass.setBindGroup(0, bindGroup);
-        const localsize = 256;
+        const localsize = 64;
         pass.dispatchWorkgroups(Math.ceil(tricount / localsize));
         pass.end();
       }
@@ -507,7 +507,7 @@ export class FractureTransform extends Transform {
         const pass = enc.beginComputePass();
         pass.setPipeline(this.fracPipeline);
         pass.setBindGroup(0, bindGroup);
-        const localsize = 256;
+        const localsize = 64;
         pass.dispatchWorkgroups(Math.ceil(tricount / localsize));
         pass.end();
       }
@@ -537,7 +537,7 @@ export class FractureTransform extends Transform {
         const pass = enc.beginComputePass();
         pass.setPipeline(this.proxPipeline);
         pass.setBindGroup(0, bindGroup);
-        const localsize = 256;
+        const localsize = 64;
         pass.dispatchWorkgroups(Math.ceil((tricount * 2) / localsize));
         pass.end();
       }
@@ -565,16 +565,16 @@ export class FractureTransform extends Transform {
     this.bufnewoutcells.destroy();
     this.bufnewout.destroy();
 
-    const { indices: tricells1, values: tris1 } = floatNcompact(12, arrtrioutcells, arrtriout);
+    let { indices: tricells, values: tris } = floatNcompact(12, arrtrioutcells, arrtriout);
     const { indices: newcells, values: news } = floatNcompact(8, arrnewoutcells, arrnewout);
+    {
+      const { indices, values } = makeFace(newcells, news);
+      tricells = tricells.concat(indices);
+      tris = tris.concat(values);
+    }
 
-    const { indices: tricells2, values: tris2 } = makeFace(newcells, news);
-    this.arrtricells = new Int32Array(tricells1.length + tricells2.length);
-    this.arrtricells.set(tricells1);
-    this.arrtricells.set(tricells2, tricells1.length);
-    this.arrtris = new Float32Array(tris1.length + tris2.length);
-    this.arrtris.set(tris1);
-    this.arrtris.set(tris2, tris1.length);
+    this.arrtricells = new Int32Array(tricells);
+    this.arrtris = new Float32Array(tris);
   }
 
   makeBufferWithData(
@@ -630,32 +630,21 @@ function makeBufferFromData(device: GPUDevice, data: TypedArrayBufferView): GPUB
 }
 
 function floatNcompact(N: number, index: Int32Array, val: Float32Array) {
-  let indicesCount = 0;
+  const indices = [];
+  const values = [];
   for (let i = 0; i < index.length; i++) {
     if (index[i] != -1) {
-      indicesCount++;
-    }
-  }
-
-  const indices = new Int32Array(indicesCount);
-  const values = new Float32Array(indicesCount * N);
-  let iIndices = 0;
-  let iValues = 0;
-  for (let i = 0; i < index.length; i++) {
-    if (index[i] != -1) {
-      indices[iIndices] = index[i];
-      iIndices++;
+      indices.push(index[i]);
       for (let n = 0; n < N; n++) {
-        values[iValues] = val[i * N + n];
-        iValues++;
+        values.push(val[i * N + n]);
       }
     }
   }
   return { indices: indices, values: values };
 }
 
-function makeFace(indices: Int32Array, points: Float32Array) {
-  const faces: [OM.vec3, OM.vec3][][] = [];
+function makeFace(indices: number[], points: number[]) {
+  const faces: OM.vec3[][][] = [];
   for (let i = 0; i < indices.length; i++) {
     const idx = indices[i];
     let f = faces[idx];
@@ -669,10 +658,8 @@ function makeFace(indices: Int32Array, points: Float32Array) {
     f.push([p1, p2]);
   }
 
-  const idxout = new Int32Array(faces.length * 3 * 2);
-  let i_idxout = 0;
-  const values = new Float32Array(faces.length * 3 * 2 * 9);
-  let i_values = 0;
+  const idxout: number[] = [];
+  const values = [];
   for (let iface = 0; iface < faces.length; iface++) {
     const f = faces[iface];
     if (!f) {
@@ -687,12 +674,10 @@ function makeFace(indices: Int32Array, points: Float32Array) {
 
     // Create a tri from the centroid and the two points on each edge
     for (let i = 0; i < f.length; i++) {
-      idxout[i_idxout] = iface;
-      i_idxout++;
-      values.set([...centr, ...f[i][0], ...f[i][1]], i_values);
-      i_values += 9;
+      idxout.push(iface);
+      values.push(...centr, ...f[i][0], ...f[i][1]);
     }
   }
 
-  return { indices: new Int32Array(idxout), values: new Float32Array(values) };
+  return { indices: idxout, values: values };
 }
