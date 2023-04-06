@@ -107,11 +107,11 @@ export var OM;
     }
     OM.mat3vec3mult = mat3vec3mult;
     function contains3c(a, c) {
-        return a[0] == c || a[1] == c || a[2] == c;
+        return a[0] === c || a[1] === c || a[2] === c;
     }
     OM.contains3c = contains3c;
     function equals2i(a, b) {
-        return (a[0] == b[0] && a[1] == b[1]) || (a[1] == b[0] && a[0] == b[1]);
+        return (a[0] === b[0] && a[1] === b[1]) || (a[1] === b[0] && a[0] === b[1]);
     }
     OM.equals2i = equals2i;
 })(OM || (OM = {}));

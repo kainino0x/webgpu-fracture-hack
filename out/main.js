@@ -41,24 +41,6 @@ async function createScene(engine, canvas) {
     }, 1000);
     return scene;
 }
-function* breadthFirstTraverse(root) {
-    const visited = new Set();
-    const queue = [{ value: root, path: [] }];
-    let node;
-    while ((node = queue.shift())) {
-        yield node;
-        for (const [k, child] of Object.entries(node.value)) {
-            if (!child || typeof child !== 'object')
-                continue;
-            if (child.buffer instanceof ArrayBuffer)
-                continue;
-            if (visited.has(child))
-                continue;
-            visited.add(child);
-            queue.push({ value: child, path: [...node.path, k] });
-        }
-    }
-}
 {
     await Ammo();
     const canvas = document.getElementById('renderCanvas');

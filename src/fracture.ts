@@ -45,8 +45,8 @@ struct CopyConfig {
   tricount: u32,
 }
 @group(0) @binding(0) var<uniform> copy_config: CopyConfig;
-@group(0) @binding(3) var<storage, read_write> copy_tricells: array<i32>;
-@group(0) @binding(4) var<storage, read_write> copy_tris: array<Tri>;
+@group(0) @binding(3) var<storage, read_write> copy_tricells: array<i32>; // size planecount*tricount
+@group(0) @binding(4) var<storage, read_write> copy_tris:     array<Tri>; // size planecount*tricount
 
 @compute @workgroup_size(${kCopyWorkgroupSize})
 fn transformCopyPerPlane(@builtin(global_invocation_id) gid: vec3<u32>) {
@@ -54,9 +54,9 @@ fn transformCopyPerPlane(@builtin(global_invocation_id) gid: vec3<u32>) {
   if i_tri >= copy_config.tricount { return; }
 
   var t = copy_tris[i_tri];
-  //t.a = copy_config.transform * t.a; // FIXME
-  //t.b = copy_config.transform * t.b;
-  //t.c = copy_config.transform * t.c;
+  t.a = copy_config.transform * t.a;
+  t.b = copy_config.transform * t.b;
+  t.c = copy_config.transform * t.c;
 
   for (var i_plane = 0u; i_plane < copy_config.planecount; i_plane++) {
     copy_tricells[i_plane * copy_config.tricount + i_tri] = i32(i_plane);
@@ -90,13 +90,14 @@ struct FracConfig {
   tricount: u32,
 }
 @group(0) @binding(0) var<uniform> frac_config: FracConfig;
-@group(0) @binding(1) var<storage, read> planes: array<vec4f>; // Nx Ny Nz d
-@group(0) @binding(3) var<storage, read> tricells: array<i32>;
-@group(0) @binding(4) var<storage, read> tris: array<Tri>;
-@group(0) @binding(5) var<storage, read_write> trioutcells: array<i32>;
-@group(0) @binding(6) var<storage, read_write> triout: array<Tri>;
-@group(0) @binding(7) var<storage, read_write> newoutcells: array<i32>;
-@group(0) @binding(8) var<storage, read_write> newout: array<vec4f>;
+@group(0) @binding(1) var<storage, read>       planes:    array<vec4f>; // size planecount, each Nx Ny Nz d
+@group(0) @binding(3) var<storage, read>       tricells:    array<i32>; // size tricount
+@group(0) @binding(4) var<storage, read>       tris:        array<Tri>; // size tricount
+@group(0) @binding(5) var<storage, read_write> trioutcells: array<i32>; // size tricount*2
+@group(0) @binding(6) var<storage, read_write> triout:      array<Tri>; // size tricount*2
+@group(0) @binding(7) var<storage, read_write> newoutcells: array<i32>; // size tricount
+struct Edge { a: vec4f, b: vec4f }
+@group(0) @binding(8) var<storage, read_write> newout:     array<Edge>; // size tricount
 
 @compute @workgroup_size(${kFracWorkgroupSize})
 fn fracture(@builtin(global_invocation_id) gid: vec3<u32>) {
@@ -362,6 +363,7 @@ export class FractureTransform extends Transform {
     this.buftris = this.makeBufferWithData(this.arrtris, {
       label: 'buftris',
       usage: GPUBufferUsage.STORAGE,
+      size: kFracturePattern.cellCount * tricount * 3 * 4 * 4,
     });
 
     {
@@ -616,14 +618,14 @@ export class FractureTransform extends Transform {
 
   makeBufferWithData(
     data: TypedArrayBufferView,
-    desc: Omit<GPUBufferDescriptor, 'size' | 'mappedAtCreation'>
+    desc: Omit<GPUBufferDescriptor, 'size'> & { size?: number }
   ) {
     const buffer = this.device.createBuffer({
-      ...desc,
       size: data.byteLength,
+      ...desc,
       mappedAtCreation: true,
     });
-    memcpy({ src: data }, { dst: buffer.getMappedRange() });
+    memcpy({ src: data }, { dst: buffer.getMappedRange(0, data.byteLength) });
     buffer.unmap();
     return buffer;
   }
@@ -664,7 +666,7 @@ function makeBufferFromData(device: GPUDevice, data: TypedArrayBufferView): GPUB
 function floatNcompact(N: number, input: { indices: Int32Array; values: Float32Array }) {
   let indicesCount = 0;
   for (let i = 0; i < input.indices.length; i++) {
-    if (input.indices[i] != -1) {
+    if (input.indices[i] !== -1) {
       indicesCount++;
     }
   }
@@ -675,7 +677,7 @@ function floatNcompact(N: number, input: { indices: Int32Array; values: Float32A
   };
   let iOut = 0;
   for (let iIn = 0; iIn < input.indices.length; iIn++) {
-    if (input.indices[iIn] != -1) {
+    if (input.indices[iIn] !== -1) {
       out.indices[iOut] = input.indices[iIn];
       memcpy(
         { src: input.values, start: iIn * N, length: N },

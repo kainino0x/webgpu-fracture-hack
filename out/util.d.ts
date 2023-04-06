@@ -10,3 +10,7 @@ export declare function memcpy(src: {
     dst: ArrayBuffer | TypedArrayBufferView;
     start?: number;
 }): void;
+export declare function breadthFirstTraverse(root: object): Generator<{
+    value: object;
+    path: string[];
+}, void, unknown>;

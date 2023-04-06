@@ -51,7 +51,9 @@ export declare class FractureTransform extends Transform {
     dispatchFracture(iteration: number, tricount: number): void;
     dispatchProx(tricount: number): void;
     outputToInput(): Promise<void>;
-    makeBufferWithData(data: TypedArrayBufferView, desc: Omit<GPUBufferDescriptor, 'size' | 'mappedAtCreation'>): GPUBuffer;
+    makeBufferWithData(data: TypedArrayBufferView, desc: Omit<GPUBufferDescriptor, 'size'> & {
+        size?: number;
+    }): GPUBuffer;
     readbackBuffer(buffer: GPUBuffer): Promise<ArrayBuffer>;
 }
 export {};

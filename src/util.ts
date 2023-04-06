@@ -43,3 +43,22 @@ export function memcpy(
 ): void {
   subarrayAsU8(dst.dst, dst).set(subarrayAsU8(src.src, src));
 }
+
+export function* breadthFirstTraverse(root: object) {
+  const visited = new Set();
+  const queue = [{ value: root, path: [] as string[] }];
+  let node;
+  while ((node = queue.shift())) {
+    yield node;
+
+    for (const [k, child] of Object.entries(node.value)) {
+      if (!child || typeof child !== 'object') continue;
+      if (child.buffer instanceof ArrayBuffer) continue;
+
+      if (visited.has(child)) continue;
+      visited.add(child);
+
+      queue.push({ value: child, path: [...node.path, k] });
+    }
+  }
+}

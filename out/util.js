@@ -29,4 +29,22 @@ function subarrayAsU8(buf, { start = 0, length }) {
 export function memcpy(src, dst) {
     subarrayAsU8(dst.dst, dst).set(subarrayAsU8(src.src, src));
 }
+export function* breadthFirstTraverse(root) {
+    const visited = new Set();
+    const queue = [{ value: root, path: [] }];
+    let node;
+    while ((node = queue.shift())) {
+        yield node;
+        for (const [k, child] of Object.entries(node.value)) {
+            if (!child || typeof child !== 'object')
+                continue;
+            if (child.buffer instanceof ArrayBuffer)
+                continue;
+            if (visited.has(child))
+                continue;
+            visited.add(child);
+            queue.push({ value: child, path: [...node.path, k] });
+        }
+    }
+}
 //# sourceMappingURL=util.js.map

@@ -126,10 +126,10 @@ export namespace OM {
   }
 
   export function contains3c(a: vec3, c: number) {
-    return a[0] == c || a[1] == c || a[2] == c;
+    return a[0] === c || a[1] === c || a[2] === c;
   }
 
   export function equals2i(a: vec2, b: vec2) {
-    return (a[0] == b[0] && a[1] == b[1]) || (a[1] == b[0] && a[0] == b[1]);
+    return (a[0] === b[0] && a[1] === b[1]) || (a[1] === b[0] && a[0] === b[1]);
   }
 }

@@ -3,7 +3,11 @@
 /// <reference types="@webgpu/types" />
 /// <reference types="babylonjs" />
 
-export function makeFragmentFromVertices(scene: BABYLON.Scene, name: string, positions: BABYLON.FloatArray) {
+export function makeFragmentFromVertices(
+  scene: BABYLON.Scene,
+  name: string,
+  positions: BABYLON.FloatArray
+) {
   const mesh = new BABYLON.Mesh(name, scene);
   {
     const vdata = new BABYLON.VertexData();
@@ -20,7 +24,7 @@ let material: BABYLON.StandardMaterial;
 
 export function makeIndependentPhysicsObject(scene: BABYLON.Scene, mesh: BABYLON.Mesh) {
   if (!material) {
-    material = new BABYLON.StandardMaterial("material", scene);
+    material = new BABYLON.StandardMaterial('material', scene);
     material.diffuseColor = new BABYLON.Color3(1, 0, 0);
     material.backFaceCulling = false;
   }

@@ -17,7 +17,7 @@ export function makeFragmentFromVertices(scene, name, positions) {
 let material;
 export function makeIndependentPhysicsObject(scene, mesh) {
     if (!material) {
-        material = new BABYLON.StandardMaterial("material", scene);
+        material = new BABYLON.StandardMaterial('material', scene);
         material.diffuseColor = new BABYLON.Color3(1, 0, 0);
         material.backFaceCulling = false;
     }
