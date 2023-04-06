@@ -1,11 +1,16 @@
 import { kFracturePattern } from './fracture_pattern.js';
 import { makeFragmentFromVertices } from './helper.js';
 import { OM } from './ourmath.js';
-import { assert, memcpy } from './util.js';
-const kFracConfigSize = 24;
-const kCopyConfigSize = 16 * 4 + 4 + 4;
+import { assert, memcpy, roundUp } from './util.js';
+const kFracConfigSize = roundUp(24, 16);
+const kCopyConfigSize = roundUp(16 * 4 + 4 + 4, 16);
 const kProxConfigSize = 4;
+const kCopyWorkgroupSize = 1; // TODO: increase these
+const kProxWorkgroupSize = 1;
+const kFracWorkgroupSize = 1;
 const kShaderCode = /* wgsl */ `
+// testTransform
+
 @group(0) @binding(1) var<storage, read> inPoints: array<f32>;
 @group(0) @binding(2) var<storage, read_write> outTriExists: array<u32>;
 @group(0) @binding(3) var<storage, read_write> outPoints: array<f32>;
@@ -27,14 +32,86 @@ fn testTransform(
   }
 }
 
-@compute @workgroup_size(1)
-fn fracture() {}
+//// fracture transform
 
-@compute @workgroup_size(1)
-fn applyProximity() {}
+struct Tri { a: vec4f, b: vec4f, c: vec4f }
 
-@compute @workgroup_size(1)
-fn transformCopyPerPlane() {}
+// transformCopyPerPlane
+
+struct CopyConfig {
+  transform: mat4x4f,
+  planecount: u32, // = cell count = the number of kth planes across all cells
+  tricount: u32,
+}
+@group(0) @binding(0) var<uniform> copy_config: CopyConfig;
+@group(0) @binding(3) var<storage, read_write> copy_tricells: array<i32>;
+@group(0) @binding(4) var<storage, read_write> copy_tris: array<Tri>;
+
+@compute @workgroup_size(${kCopyWorkgroupSize})
+fn transformCopyPerPlane(@builtin(global_invocation_id) gid: vec3<u32>) {
+  let i_tri = gid.x;
+  if i_tri >= copy_config.tricount { return; }
+
+  var t = copy_tris[i_tri];
+  //t.a = copy_config.transform * t.a; // FIXME
+  //t.b = copy_config.transform * t.b;
+  //t.c = copy_config.transform * t.c;
+
+  for (var i_plane = 0u; i_plane < copy_config.planecount; i_plane++) {
+    copy_tricells[i_plane * copy_config.tricount + i_tri] = i32(i_plane);
+    copy_tris    [i_plane * copy_config.tricount + i_tri] = t;
+  }
+}
+
+// applyProximity
+
+@group(0) @binding(0) var<storage, read> prox_prox: array<u32>; // true/false proximate per cell
+struct ProxConfig { tricount: u32 }
+@group(0) @binding(1) var<uniform> prox_config: ProxConfig;
+@group(0) @binding(2) var<storage, read_write> prox_tricells: array<i32>; // modified in place
+
+@compute @workgroup_size(${kProxWorkgroupSize})
+fn applyProximity(@builtin(global_invocation_id) gid: vec3<u32>) {
+  let i_tri = gid.x;
+  if i_tri >= prox_config.tricount { return; }
+
+  let c = prox_tricells[i_tri];
+  if c != -1 && prox_prox[c] == 0 {
+    prox_tricells[i_tri] = -2; // -1 means delete, -2 doesn't!
+  }
+}
+
+// fracture
+
+struct FracConfig {
+  fracCenter: vec4f,
+  planecount: u32,
+  tricount: u32,
+}
+@group(0) @binding(0) var<uniform> frac_config: FracConfig;
+@group(0) @binding(1) var<storage, read> planes: array<vec4f>; // Nx Ny Nz d
+@group(0) @binding(3) var<storage, read> tricells: array<i32>;
+@group(0) @binding(4) var<storage, read> tris: array<Tri>;
+@group(0) @binding(5) var<storage, read_write> trioutcells: array<i32>;
+@group(0) @binding(6) var<storage, read_write> triout: array<Tri>;
+@group(0) @binding(7) var<storage, read_write> newoutcells: array<i32>;
+@group(0) @binding(8) var<storage, read_write> newout: array<vec4f>;
+
+@compute @workgroup_size(${kFracWorkgroupSize})
+fn fracture(@builtin(global_invocation_id) gid: vec3<u32>) {
+  _ = &planes;
+  _ = &newout;
+
+  let index = gid.x;
+  if index >= frac_config.tricount { return; }
+
+  // The following makes this kernel a no-op; i.e., each of
+  // the 50 fracture pieces will be a copy of the original mesh.
+  trioutcells[2 * index] = tricells[index];
+  trioutcells[2 * index + 1] = -1;
+  triout[2 * index] = tris[index];
+  newoutcells[index] = -1;
+}
 `;
 const shaderModuleForDevice = new WeakMap();
 function getShaderModuleForDevice(device) {
@@ -51,7 +128,10 @@ class Transform {
     constructor(scene) {
         this.scene = scene;
         this.device = scene.getEngine()._device;
-        this.device.addEventListener('uncapturederror', console.log);
+    }
+    async transform(original) {
+        await this.transformImpl(original);
+        original.dispose();
     }
 }
 export class TestTransform extends Transform {
@@ -73,7 +153,7 @@ export class TestTransform extends Transform {
         self.layout = self.pipeline.getBindGroupLayout(0);
         return self;
     }
-    async transform(original) {
+    async transformImpl(original) {
         const origPositions = original.getVerticesData(BABYLON.VertexBuffer.PositionKind);
         assert(origPositions instanceof Float32Array);
         const numInputPoints = origPositions.length / 3;
@@ -113,9 +193,9 @@ export class TestTransform extends Transform {
         });
         this.device.queue.writeBuffer(this.config, 0, new Float32Array([numInputTris]));
         {
-            const enc = this.device.createCommandEncoder();
+            const enc = this.device.createCommandEncoder({ label: 'transform' });
             {
-                const pass = enc.beginComputePass();
+                const pass = enc.beginComputePass({ label: 'transform' });
                 pass.setPipeline(this.pipeline);
                 pass.setBindGroup(0, bindGroup);
                 pass.dispatchWorkgroups(numOutputTris);
@@ -123,7 +203,7 @@ export class TestTransform extends Transform {
             }
             enc.copyBufferToBuffer(outTriExists, 0, outTriExistsReadback, 0, numOutputTris * 4);
             enc.copyBufferToBuffer(outPoints, 0, outPointsReadback, 0, numOutputBytes);
-            this.device.queue.submit([enc.finish()]);
+            this.device.queue.submit([enc.finish({ label: 'transform' })]);
         }
         inPoints.destroy();
         outPoints.destroy();
@@ -148,7 +228,6 @@ export class TestTransform extends Transform {
         }
         outTriExistsReadback.destroy();
         outPointsReadback.destroy();
-        original.dispose();
     }
 }
 export class FractureTransform extends Transform {
@@ -171,6 +250,7 @@ export class FractureTransform extends Transform {
     buftriout;
     bufnewoutcells;
     bufnewout;
+    cellProxBuf;
     static async Create(scene) {
         const self = new FractureTransform(scene);
         const module = getShaderModuleForDevice(self.device);
@@ -206,30 +286,36 @@ export class FractureTransform extends Transform {
         });
         self.proxLayout = self.proxPipeline.getBindGroupLayout(0);
         self.cellBuffers = kFracturePattern.cellData.map((data) => makeBufferFromData(self.device, data));
+        self.cellProxBuf = makeBufferFromData(self.device, kFracturePattern.cellProx);
         return self;
     }
-    async transform(original) {
+    async transformImpl(original) {
         const origPositions = original.getVerticesData(BABYLON.VertexBuffer.PositionKind);
         assert(origPositions instanceof Float32Array);
         const vertsAsFloat4 = new Float32Array((origPositions.length / 3) * 4);
         for (let iVertex = 0; iVertex < origPositions.length / 3; ++iVertex) {
             memcpy({ src: origPositions, start: iVertex * 3, length: 3 }, { dst: vertsAsFloat4, start: iVertex * 4 });
+            // w is left as 0, it should be unused
         }
         const matrix = original.computeWorldMatrix().getRotationMatrix();
         const rotation = matrix.toArray();
         const pImpact = [0, 0, 0]; // TODO: wire up mouse input
         const fractured = await this.doFracture(vertsAsFloat4, rotation, pImpact);
+        let fragmentCount = 0;
         for (let i = 0; i < fractured.length; i++) {
             const fr = fractured[i];
             if (fr) {
-                const fracPos = fr.position;
+                fragmentCount++;
                 const name = `${original.name}.${i}`;
-                makeFragmentFromVertices(this.scene, name, fr.points.flat());
+                const mesh = makeFragmentFromVertices(this.scene, name, fr.points.flat());
+                // TODO: give the fragment the correct transform
+                mesh.position.y += 3;
             }
         }
+        console.log(`created ${fragmentCount} fragments, of ${kFracturePattern.cellCount} possible`);
     }
     doTransformCopyPerPlane(transform) {
-        const tricount = this.arrtris.length / 4;
+        const tricount = this.arrtris.length / 3 / 4;
         this.buftricells = this.device.createBuffer({
             label: 'buftricells',
             size: kFracturePattern.cellCount * tricount * 4,
@@ -249,6 +335,7 @@ export class FractureTransform extends Transform {
             this.device.queue.writeBuffer(this.copyConfig, 0, config);
         }
         const bindGroup = this.device.createBindGroup({
+            label: 'transformCopyPerPlane',
             layout: this.copyLayout,
             entries: [
                 // transform, cellCount, tricount
@@ -261,16 +348,15 @@ export class FractureTransform extends Transform {
             ],
         });
         {
-            const enc = this.device.createCommandEncoder();
+            const enc = this.device.createCommandEncoder({ label: 'transformCopyPerPlane' });
             {
-                const pass = enc.beginComputePass();
+                const pass = enc.beginComputePass({ label: 'transformCopyPerPlane' });
                 pass.setPipeline(this.copyPipeline);
                 pass.setBindGroup(0, bindGroup);
-                const localsize = 1;
-                pass.dispatchWorkgroups(Math.ceil(tricount / localsize));
+                pass.dispatchWorkgroups(Math.ceil(tricount / kCopyWorkgroupSize));
                 pass.end();
             }
-            this.device.queue.submit([enc.finish()]);
+            this.device.queue.submit([enc.finish({ label: 'transformCopyPerPlane' })]);
         }
         return tricount * kFracturePattern.cellCount;
     }
@@ -283,25 +369,25 @@ export class FractureTransform extends Transform {
             this.dispatchFracture(i, tricount);
             if (i === this.cellBuffers.length - 1) {
                 // on the last iteration, before copying to cpu, merge faraway cells
-                this.dispatchProx(tricount);
+                //this.dispatchProx(tricount); // TODO: turn this back on
             }
-            await this.outputToInput(tricount);
+            await this.outputToInput();
             tricount = this.arrtricells.length;
         }
         const cellfaces = [];
-        for (let i = 0; i < this.arrtricells.length; i++) {
-            const idx = this.arrtricells[i] + 2; // so that -2 becomes a valid cell
-            let c = cellfaces[idx];
+        for (let i_tri = 0; i_tri < this.arrtricells.length; i_tri++) {
+            const i_cell = this.arrtricells[i_tri] + 2; // so that -2 becomes a valid cell
+            let c = cellfaces[i_cell];
             if (!c) {
-                c = cellfaces[idx] = {
+                c = cellfaces[i_cell] = {
                     points: [],
                     faces: [],
                     min: [10000, 10000, 10000],
                     max: [-10000, -10000, -10000],
                 };
             }
-            for (let v = 0; v < 3; v++) {
-                const off = i * 12 + v * 4;
+            for (let i_vertex = 0; i_vertex < 3; i_vertex++) {
+                const off = i_tri * 12 + i_vertex * 4;
                 const p = [this.arrtris[off + 0], this.arrtris[off + 1], this.arrtris[off + 2]];
                 c.points.push(p);
                 c.min = OM.compwise(Math.min, c.min, p);
@@ -329,29 +415,29 @@ export class FractureTransform extends Transform {
             this.buftricells = this.makeBufferWithData(this.arrtricells, {
                 usage: GPUBufferUsage.STORAGE,
             });
-            this.buftricells = this.makeBufferWithData(this.arrtris, {
+            this.buftris = this.makeBufferWithData(this.arrtris, {
                 usage: GPUBufferUsage.STORAGE,
             });
         }
         this.buftrioutcells = this.device.createBuffer({
             label: 'buftrioutcells',
             size: tricount * 2 * 4,
-            usage: GPUBufferUsage.STORAGE,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
         });
         this.buftriout = this.device.createBuffer({
             label: 'buftriout',
             size: tricount * 2 * 12 * 4,
-            usage: GPUBufferUsage.STORAGE,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
         });
         this.bufnewoutcells = this.device.createBuffer({
             label: 'bufnewoutcells',
             size: tricount * 4,
-            usage: GPUBufferUsage.STORAGE,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
         });
         this.bufnewout = this.device.createBuffer({
             label: 'bufnewout',
             size: tricount * 2 * 4 * 4,
-            usage: GPUBufferUsage.STORAGE,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
         });
         {
             const config = new ArrayBuffer(kFracConfigSize);
@@ -363,7 +449,7 @@ export class FractureTransform extends Transform {
             this.device.queue.writeBuffer(this.fracConfig, 0, config);
         }
         const bindGroup = this.device.createBindGroup({
-            label: 'doFractureStep',
+            label: 'fracture',
             layout: this.fracLayout,
             entries: [
                 // fractureCenter, cellCount, tricount
@@ -381,16 +467,15 @@ export class FractureTransform extends Transform {
             ],
         });
         {
-            const enc = this.device.createCommandEncoder();
+            const enc = this.device.createCommandEncoder({ label: 'fracture' });
             {
-                const pass = enc.beginComputePass();
+                const pass = enc.beginComputePass({ label: 'fracture' });
                 pass.setPipeline(this.fracPipeline);
                 pass.setBindGroup(0, bindGroup);
-                const localsize = 1;
-                pass.dispatchWorkgroups(Math.ceil(tricount / localsize));
+                pass.dispatchWorkgroups(Math.ceil(tricount / kFracWorkgroupSize));
                 pass.end();
             }
-            this.device.queue.submit([enc.finish()]);
+            this.device.queue.submit([enc.finish({ label: 'fracture' })]);
         }
     }
     dispatchProx(tricount) {
@@ -402,44 +487,52 @@ export class FractureTransform extends Transform {
             label: 'prox',
             layout: this.proxLayout,
             entries: [
+                { binding: 0, resource: { buffer: this.cellProxBuf } },
                 { binding: 1, resource: { buffer: this.proxConfig } },
                 { binding: 2, resource: { buffer: this.buftrioutcells } },
             ],
         });
         {
-            const enc = this.device.createCommandEncoder();
+            const enc = this.device.createCommandEncoder({ label: 'prox' });
             {
-                const pass = enc.beginComputePass();
+                const pass = enc.beginComputePass({ label: 'prox' });
                 pass.setPipeline(this.proxPipeline);
                 pass.setBindGroup(0, bindGroup);
-                const localsize = 1;
-                pass.dispatchWorkgroups(Math.ceil((tricount * 2) / localsize));
+                pass.dispatchWorkgroups(Math.ceil((tricount * 2) / kProxWorkgroupSize));
                 pass.end();
             }
-            this.device.queue.submit([enc.finish()]);
+            this.device.queue.submit([enc.finish({ label: 'prox' })]);
         }
     }
-    async outputToInput(oldtricount) {
+    async outputToInput() {
         this.buftris.destroy();
         const [arrtrioutcells, arrtriout, arrnewoutcells, arrnewout] = await Promise.all([
-            this.readbackBuffer(this.buftrioutcells, 4 * oldtricount * 2).then((ab) => new Int32Array(ab)),
-            this.readbackBuffer(this.buftriout, 4 * oldtricount * 2 * 12).then((ab) => new Float32Array(ab)),
-            this.readbackBuffer(this.bufnewoutcells, 4 * oldtricount).then((ab) => new Int32Array(ab)),
-            this.readbackBuffer(this.bufnewout, 4 * oldtricount * 2 * 4).then((ab) => new Float32Array(ab)),
+            this.readbackBuffer(this.buftrioutcells).then((ab) => new Int32Array(ab)),
+            this.readbackBuffer(this.buftriout).then((ab) => new Float32Array(ab)),
+            this.readbackBuffer(this.bufnewoutcells).then((ab) => new Int32Array(ab)),
+            this.readbackBuffer(this.bufnewout).then((ab) => new Float32Array(ab)),
         ]);
         this.buftrioutcells.destroy();
         this.buftriout.destroy();
         this.bufnewoutcells.destroy();
         this.bufnewout.destroy();
-        let { indices: tricells, values: tris } = floatNcompact(12, arrtrioutcells, arrtriout);
-        const { indices: newcells, values: news } = floatNcompact(8, arrnewoutcells, arrnewout);
-        {
-            const { indices, values } = makeFace(newcells, news);
-            tricells = tricells.concat(indices);
-            tris = tris.concat(values);
-        }
-        this.arrtricells = new Int32Array(tricells);
-        this.arrtris = new Float32Array(tris);
+        const { indices: tricells1, values: tris1 } = floatNcompact(12, {
+            indices: arrtrioutcells,
+            values: arrtriout,
+        });
+        //console.log('triout compacted', arrtrioutcells.length, 'to', tricells1.length);
+        const { indices: newcells, values: news } = floatNcompact(8, {
+            indices: arrnewoutcells,
+            values: arrnewout,
+        });
+        //console.log('newout compacted', arrnewoutcells.length, 'to', newcells.length);
+        const { indices: tricells2, values: tris2 } = makeFace(newcells, news);
+        this.arrtricells = new Int32Array(tricells1.length + tricells2.length);
+        this.arrtricells.set(tricells1);
+        this.arrtricells.set(tricells2, tricells1.length);
+        this.arrtris = new Float32Array(tris1.length + tris2.length);
+        this.arrtris.set(tris1);
+        this.arrtris.set(tris2, tris1.length);
     }
     makeBufferWithData(data, desc) {
         const buffer = this.device.createBuffer({
@@ -451,25 +544,19 @@ export class FractureTransform extends Transform {
         buffer.unmap();
         return buffer;
     }
-    async readbackBuffer(buffer, size) {
-        assert(size % 4 === 0);
+    async readbackBuffer(buffer) {
+        assert(buffer.size % 4 === 0);
         const readback = this.device.createBuffer({
             label: 'readback for ' + buffer.label,
-            size,
+            size: buffer.size,
             usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
         });
         {
-            const enc = this.device.createCommandEncoder();
-            enc.copyBufferToBuffer(buffer, 0, readback, 0, size);
-            this.device.queue.submit([enc.finish()]);
+            const enc = this.device.createCommandEncoder({ label: 'readback' });
+            enc.copyBufferToBuffer(buffer, 0, readback, 0, buffer.size);
+            this.device.queue.submit([enc.finish({ label: 'readback' })]);
         }
-        try {
-            await readback.mapAsync(GPUMapMode.READ);
-        }
-        catch (ex) {
-            // For some reason breakpoints aren't catching a rejection here??
-            debugger;
-        }
+        await readback.mapAsync(GPUMapMode.READ);
         const copy = readback.getMappedRange().slice(0);
         readback.destroy();
         return copy;
@@ -486,18 +573,29 @@ function makeBufferFromData(device, data) {
     buffer.unmap();
     return buffer;
 }
-function floatNcompact(N, index, val) {
-    const indices = [];
-    const values = [];
-    for (let i = 0; i < index.length; i++) {
-        if (index[i] != -1) {
-            indices.push(index[i]);
-            for (let n = 0; n < N; n++) {
-                values.push(val[i * N + n]);
-            }
+function floatNcompact(N, input) {
+    let indicesCount = 0;
+    for (let i = 0; i < input.indices.length; i++) {
+        if (input.indices[i] != -1) {
+            indicesCount++;
         }
     }
-    return { indices: indices, values: values };
+    const out = {
+        indices: new Int32Array(indicesCount),
+        values: new Float32Array(indicesCount * N),
+    };
+    let iOut = 0;
+    for (let iIn = 0; iIn < input.indices.length; iIn++) {
+        if (input.indices[iIn] != -1) {
+            out.indices[iOut] = input.indices[iIn];
+            memcpy({ src: input.values, start: iIn * N, length: N }, { dst: out.values, start: iOut * N });
+            //for (let n = 0; n < N; n++) {
+            //  values[iOut * N + n] = val[iIn * N + n];
+            //}
+            iOut++;
+        }
+    }
+    return out;
 }
 function makeFace(indices, points) {
     const faces = [];
@@ -512,8 +610,10 @@ function makeFace(indices, points) {
         const p2 = [points[i * 8 + 4], points[i * 8 + 5], points[i * 8 + 6]];
         f.push([p1, p2]);
     }
-    const idxout = [];
-    const values = [];
+    const idxout = new Int32Array(indices.length);
+    const values = new Float32Array(indices.length * 9);
+    let i_idxout = 0;
+    let i_values = 0;
     for (let iface = 0; iface < faces.length; iface++) {
         const f = faces[iface];
         if (!f) {
@@ -526,10 +626,12 @@ function makeFace(indices, points) {
         centr = OM.mult3c(centr, 0.5 / f.length);
         // Create a tri from the centroid and the two points on each edge
         for (let i = 0; i < f.length; i++) {
-            idxout.push(iface);
-            values.push(...centr, ...f[i][0], ...f[i][1]);
+            idxout[i_idxout] = iface;
+            i_idxout++;
+            values.set([...centr, ...f[i][0], ...f[i][1]], i_values);
+            i_values += 9;
         }
     }
-    return { indices: idxout, values: values };
+    return { indices: new Int32Array(idxout), values: new Float32Array(values) };
 }
 //# sourceMappingURL=fracture.js.map

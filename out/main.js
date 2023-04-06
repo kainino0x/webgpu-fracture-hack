@@ -1,4 +1,4 @@
-import { FractureTransform, TestTransform } from './fracture.js';
+import { FractureTransform } from './fracture.js';
 import { makeFragmentFromVertices } from './helper.js';
 async function createScene(engine, canvas) {
     // Setup basic scene
@@ -30,16 +30,14 @@ async function createScene(engine, canvas) {
     const cube = makeFragmentFromVertices(scene, 'cube', cubePositions);
     cube.position.y += 3;
     cube.physicsImpostor.setLinearVelocity(new BABYLON.Vector3(0.5, 0.5, 0.5));
-    for (const node of breadthFirstTraverse(cube)) {
-        if (node.value instanceof GPUBuffer)
-            console.log('found GPUBuffer at cube.' + node.path.join('.'));
-    }
-    const testTransform = await TestTransform.Create(scene);
-    const transform = await FractureTransform.Create(scene);
+    //for (const node of breadthFirstTraverse(cube)) {
+    //  if (node.value instanceof GPUBuffer) {
+    //    console.log('found GPUBuffer at cube.' + node.path.join('.'));
+    //  }
+    //}
+    const fractureTransform = await FractureTransform.Create(scene);
     setTimeout(() => {
-        ////////////////////////////////////////////////////////////////////////////////// SWITCH HERE
-        void testTransform.transform(cube);
-        //void transform.transform(cube);
+        void fractureTransform.transform(cube);
     }, 1000);
     return scene;
 }

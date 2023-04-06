@@ -6,7 +6,16 @@ export function assert(condition: boolean): asserts condition {
   }
 }
 
-export type TypedArrayBufferView = Float32Array | Uint8Array | Int32Array; // expand as needed
+/** Round `n` up to the next multiple of `alignment` (inclusive). */
+export function roundUp(n: number, alignment: number): number {
+  assert(Number.isInteger(n) && n >= 0);
+  assert(Number.isInteger(alignment) && alignment > 0);
+  return Math.ceil(n / alignment) * alignment;
+}
+
+export type TypedArrayBufferView =
+  // expand as needed
+  Float32Array | Uint8Array | Int32Array | Uint32Array;
 
 function subarrayAsU8(
   buf: ArrayBuffer | TypedArrayBufferView,

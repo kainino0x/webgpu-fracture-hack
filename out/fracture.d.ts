@@ -6,14 +6,15 @@ declare abstract class Transform {
     readonly device: GPUDevice;
     protected readonly scene: BABYLON.Scene;
     constructor(scene: BABYLON.Scene);
-    abstract transform(original: BABYLON.Mesh): Promise<void>;
+    transform(original: BABYLON.Mesh): Promise<void>;
+    protected abstract transformImpl(original: BABYLON.Mesh): Promise<void>;
 }
 export declare class TestTransform extends Transform {
     config: GPUBuffer;
     pipeline: GPUComputePipeline;
     layout: GPUBindGroupLayout;
     static Create(scene: BABYLON.Scene): Promise<TestTransform>;
-    transform(original: BABYLON.Mesh): Promise<void>;
+    transformImpl(original: BABYLON.Mesh): Promise<void>;
 }
 export declare class FractureTransform extends Transform {
     fracPipeline: GPUComputePipeline;
@@ -35,8 +36,9 @@ export declare class FractureTransform extends Transform {
     buftriout: GPUBuffer;
     bufnewoutcells: GPUBuffer;
     bufnewout: GPUBuffer;
+    cellProxBuf: GPUBuffer;
     static Create(scene: BABYLON.Scene): Promise<FractureTransform>;
-    transform(original: BABYLON.Mesh): Promise<void>;
+    transformImpl(original: BABYLON.Mesh): Promise<void>;
     doTransformCopyPerPlane(transform: OM.mat4x4): number;
     doFracture(vertsAsFloat4: Float32Array, transform: OM.mat4x4, pImpact: OM.vec3): Promise<{
         min: OM.vec3;
@@ -48,8 +50,8 @@ export declare class FractureTransform extends Transform {
     }[]>;
     dispatchFracture(iteration: number, tricount: number): void;
     dispatchProx(tricount: number): void;
-    outputToInput(oldtricount: number): Promise<void>;
+    outputToInput(): Promise<void>;
     makeBufferWithData(data: TypedArrayBufferView, desc: Omit<GPUBufferDescriptor, 'size' | 'mappedAtCreation'>): GPUBuffer;
-    readbackBuffer(buffer: GPUBuffer, size: number): Promise<ArrayBuffer>;
+    readbackBuffer(buffer: GPUBuffer): Promise<ArrayBuffer>;
 }
 export {};

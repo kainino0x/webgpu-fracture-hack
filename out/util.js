@@ -4,6 +4,12 @@ export function assert(condition) {
         throw new Error();
     }
 }
+/** Round `n` up to the next multiple of `alignment` (inclusive). */
+export function roundUp(n, alignment) {
+    assert(Number.isInteger(n) && n >= 0);
+    assert(Number.isInteger(alignment) && alignment > 0);
+    return Math.ceil(n / alignment) * alignment;
+}
 function subarrayAsU8(buf, { start = 0, length }) {
     if (buf instanceof ArrayBuffer) {
         return new Uint8Array(buf, start, length);

@@ -43,17 +43,15 @@ async function createScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement) {
   const cube = makeFragmentFromVertices(scene, 'cube', cubePositions);
   cube.position.y += 3;
   cube.physicsImpostor!.setLinearVelocity(new BABYLON.Vector3(0.5, 0.5, 0.5));
-  for (const node of breadthFirstTraverse(cube)) {
-    if (node.value instanceof GPUBuffer)
-      console.log('found GPUBuffer at cube.' + node.path.join('.'));
-  }
+  //for (const node of breadthFirstTraverse(cube)) {
+  //  if (node.value instanceof GPUBuffer) {
+  //    console.log('found GPUBuffer at cube.' + node.path.join('.'));
+  //  }
+  //}
 
-  const testTransform = await TestTransform.Create(scene);
-  const transform = await FractureTransform.Create(scene);
+  const fractureTransform = await FractureTransform.Create(scene);
   setTimeout(() => {
-    ////////////////////////////////////////////////////////////////////////////////// SWITCH HERE
-    void testTransform.transform(cube);
-    //void transform.transform(cube);
+    void fractureTransform.transform(cube);
   }, 1000);
 
   return scene;
