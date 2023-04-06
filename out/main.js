@@ -38,8 +38,8 @@ async function createScene(engine, canvas) {
     const transform = await FractureTransform.Create(scene);
     setTimeout(() => {
         ////////////////////////////////////////////////////////////////////////////////// SWITCH HERE
-        void testTransform.transform(cube);
-        //void transform.transform(cube);
+        //void testTransform.transform(cube);
+        void transform.transform(cube);
     }, 1000);
     return scene;
 }

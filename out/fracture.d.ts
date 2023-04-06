@@ -35,6 +35,7 @@ export declare class FractureTransform extends Transform {
     buftriout: GPUBuffer;
     bufnewoutcells: GPUBuffer;
     bufnewout: GPUBuffer;
+    cellProxBuf: GPUBuffer;
     static Create(scene: BABYLON.Scene): Promise<FractureTransform>;
     transform(original: BABYLON.Mesh): Promise<void>;
     doTransformCopyPerPlane(transform: OM.mat4x4): number;
