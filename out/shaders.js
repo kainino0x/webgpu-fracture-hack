@@ -4,9 +4,9 @@ export var Shaders;
     Shaders.kFracConfigSize = roundUp(24, 16);
     Shaders.kCopyConfigSize = roundUp(16 * 4 + 4 + 4, 16);
     Shaders.kProxConfigSize = 4;
-    Shaders.kCopyWorkgroupSize = 1; // TODO: increase these
-    Shaders.kProxWorkgroupSize = 1;
-    Shaders.kFracWorkgroupSize = 1;
+    Shaders.kCopyWorkgroupSize = 32; // TODO: increase these
+    Shaders.kProxWorkgroupSize = 32;
+    Shaders.kFracWorkgroupSize = 32;
     Shaders.kShaderCode = `
 // testTransform
 
@@ -97,20 +97,152 @@ struct FracConfig {
 struct Edge { a: vec4f, b: vec4f }
 @group(0) @binding(8) var<storage, read_write> newout:     array<Edge>; // size tricount
 
+const kNoOpMode = false;
+
 @compute @workgroup_size(${Shaders.kFracWorkgroupSize})
 fn fracture(@builtin(global_invocation_id) gid: vec3<u32>) {
-  _ = &planes;
-  _ = &newout;
-
   let index = gid.x;
   if index >= frac_config.tricount { return; }
 
-  // The following makes this kernel a no-op; i.e., each of
-  // the 50 fracture pieces will be a copy of the original mesh.
-  trioutcells[2 * index] = tricells[index];
-  trioutcells[2 * index + 1] = -1;
-  triout[2 * index] = tris[index];
-  newoutcells[index] = -1;
+  if kNoOpMode {
+    // The following makes this kernel a no-op; i.e., each of
+    // the 50 fracture pieces will be a copy of the original mesh.
+    trioutcells[2 * index] = tricells[index];
+    trioutcells[2 * index + 1] = -1;
+    triout[2 * index] = tris[index];
+    newoutcells[index] = -1;
+  } else {
+    let cell = tricells[index];
+    let _pla = planes[cell];
+    if all(_pla.xyz == vec3(0, 0, 0)) {
+      // this cell doesn't have a plane on this iteration; do nothing
+      trioutcells[2 * index] = cell;
+      triout[2 * index] = tris[index];
+      trioutcells[2 * index + 1] = -1;
+      newoutcells[index] = -1;
+      return;
+    }
+    let pN = vec4(_pla.xyz, 0);
+    // move the plane into local coordinate system.
+    let pd = _pla.w + dot(pN, frac_config.fracCenter);
+    let pP = vec4(0, 0, -pd / pN.z, 0); // Arbitrarily calculate a point on the plane (z-axis intersection)
+    let tri = tris[index];
+
+    // TODO(sic): perform plane-triangle clip
+    var cull1 = dot(pN, tri.a - pP) < 0;
+    var cull2 = dot(pN, tri.b - pP) < 0;
+    var cull3 = dot(pN, tri.c - pP) < 0;
+    var winding = true; // keeps track of whether or not the winding is still consistent.
+
+    var p1 = tri.a;
+    var p2 = tri.b;
+    var p3 = tri.c;
+    // sort the points from culled to not culled.
+    if !cull1 {  // if cull1 is false, swap 1 and 3 (order 321)
+      // is this faster than putting if-else?  if (cull3){...} else if (cull2){...}
+      cull1 = cull3;
+      cull3 = false;
+      p1 = tri.c;
+      p2 = tri.b;
+      p3 = tri.a;
+
+      winding = false;
+
+      if !cull1 {  // if it's still false, swap 1 and 2 (final order 231)
+        cull1 = cull2;
+        cull2 = false;
+        p1 = tri.b;
+        p2 = tri.c;
+
+        winding = true;
+      }
+    } else if !cull2 {
+      cull2 = cull3;
+      cull3 = false;
+
+      p1 = tri.a;
+      p2 = tri.c;
+      p3 = tri.b;
+
+      winding = false;
+    }
+
+    // note that it's configured to output only the original triagle by default.
+    var newTri1 = tri;    // current triangle.
+    var newTri2 = Tri();
+    var cell1 = cell;     // cell of the current face.
+    var cell2 = -1;       // cell of the new face.
+    var cellP = -1;       // cell of the new points (for newoutcells).
+    var newP1: vec4f;     // new points.
+    var newP2: vec4f;
+
+    if cull3 {  // if all 3 points are culled, do nothing.  Output is -1
+      cell1 = -1;
+    } else if !cull1 {  // if all 3 points are not culled, add to output normally.
+      // do nothing.
+    } else if !cull2 {  // XOR: if only one point is culled (p1), needs new face, add both to output
+      // calculate new edge p1-p2
+      var v = normalize(p1 - p2);
+      newP1 = p2 + v * -(dot(p2, pN) + pd) / dot(v, pN);
+
+      // calculate new edge p1-p3
+      v = normalize(p1 - p3);
+      newP2 = p3 + v * -(dot(p3, pN) + pd) / dot(v, pN);
+
+      newTri1.a = p2;
+      newTri2.a = p2;
+      if winding {
+        newTri1.b = newP2;
+        newTri1.c = newP1;
+        newTri2.b = p3;
+        newTri2.c = newP2;
+      } else {
+        newTri1.b = newP1;
+        newTri1.c = newP2;
+        newTri2.b = newP2;
+        newTri2.c = p3;
+      }
+
+      // Both new faces and new points
+      cell2 = cell;
+      cellP = cell;
+    } else {  // two points culled (p1, p2), modify current face and add to output
+      // calculate new edge p2-p3
+      var v = normalize(p2 - p3);
+      newP1 = p3 + v * -(dot(p3, pN) + pd) / dot(v, pN);
+
+      // calculate new edge p1-p3
+      v = normalize(p1 - p3);
+      newP2 = p3 + v * -(dot(p3, pN) + pd) / dot(v, pN);
+
+      // set new points
+      newTri1.a = newP1;
+      if winding {
+          newTri1.b = p3;
+          newTri1.c = newP2;
+      } else {
+          newTri1.b = newP2;
+          newTri1.c = p3;
+      }
+      
+      // just new points.
+      cellP = cell;
+    }
+
+    // output triangles.
+    trioutcells[2 * index] = cell1;
+    triout[2 * index] = newTri1;
+    trioutcells[2 * index + 1] = cell2;
+    triout[2 * index + 1] = newTri2;
+    
+    // output new points (for later triangulation).
+    newoutcells[index] = cellP;
+    if winding {
+      newout[index] = Edge(newP1, newP2);
+    } else {
+      newout[index] = Edge(newP2, newP1);
+    }
+  }
 }
 `;
 })(Shaders || (Shaders = {}));
