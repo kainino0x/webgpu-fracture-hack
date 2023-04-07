@@ -24,13 +24,13 @@ class Transform {
         this.scene = scene;
         this.device = scene.getEngine()._device;
     }
-    async transform(original) {
+    async transform(original, hit) {
         // Freeze physics while fracturing. Allows adding in the fragments
         // incrementally while yielding to the event loop.
         this.scene.physicsEnabled = false;
         {
             this.scene.removeMesh(original);
-            await this.transformImpl(original);
+            await this.transformImpl(original, hit);
             original.dispose();
         }
         this.scene.physicsEnabled = true;
@@ -55,9 +55,9 @@ export class TestTransform extends Transform {
         self.layout = self.pipeline.getBindGroupLayout(0);
         return self;
     }
-    async transformImpl(original) {
-        const origPositions = original.getVerticesData(BABYLON.VertexBuffer.PositionKind);
-        assert(origPositions instanceof Float32Array);
+    async transformImpl(original, hit) {
+        const origPositionsB = original.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+        const origPositions = origPositionsB instanceof Float32Array ? origPositionsB : new Float32Array(origPositionsB);
         const numInputPoints = origPositions.length / 3;
         const numInputTris = numInputPoints / 3;
         const kNumCells = 2;
@@ -194,9 +194,9 @@ export class FractureTransform extends Transform {
         self.cellProxBuf = makeBufferFromData(self.device, kFracturePattern.cellProx);
         return self;
     }
-    async transformImpl(original) {
-        const origPositions = original.getVerticesData(BABYLON.VertexBuffer.PositionKind);
-        assert(origPositions instanceof Float32Array);
+    async transformImpl(original, hit) {
+        const origPositionsB = original.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+        const origPositions = origPositionsB instanceof Float32Array ? origPositionsB : new Float32Array(origPositionsB);
         const vertsAsFloat4 = new Float32Array((origPositions.length / 3) * 4);
         for (let iVertex = 0; iVertex < origPositions.length / 3; ++iVertex) {
             memcpy({ src: origPositions, start: iVertex * 3, length: 3 }, { dst: vertsAsFloat4, start: iVertex * 4 });
@@ -204,7 +204,8 @@ export class FractureTransform extends Transform {
         }
         const matrix = original.computeWorldMatrix().getRotationMatrix();
         const rotation = matrix.toArray();
-        const pImpact = [0, 1, 0]; // TODO: wire up mouse input
+        const pImpactB = hit.pickedPoint.subtract(original.position);
+        const pImpact = [pImpactB.x, pImpactB.y, pImpactB.z];
         const fractured = await this.doFracture(vertsAsFloat4, rotation, pImpact);
         let fragmentCount = 0;
         for (let i = 0; i < fractured.length; i++) {

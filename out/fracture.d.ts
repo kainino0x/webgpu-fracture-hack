@@ -6,15 +6,15 @@ declare abstract class Transform {
     readonly device: GPUDevice;
     protected readonly scene: BABYLON.Scene;
     constructor(scene: BABYLON.Scene);
-    transform(original: BABYLON.Mesh): Promise<void>;
-    protected abstract transformImpl(original: BABYLON.Mesh): Promise<void>;
+    transform(original: BABYLON.Mesh, hit: BABYLON.PickingInfo): Promise<void>;
+    protected abstract transformImpl(original: BABYLON.Mesh, hit: BABYLON.PickingInfo): Promise<void>;
 }
 export declare class TestTransform extends Transform {
     config: GPUBuffer;
     pipeline: GPUComputePipeline;
     layout: GPUBindGroupLayout;
     static Create(scene: BABYLON.Scene): Promise<TestTransform>;
-    transformImpl(original: BABYLON.Mesh): Promise<void>;
+    transformImpl(original: BABYLON.Mesh, hit: BABYLON.PickingInfo): Promise<void>;
 }
 export declare class FractureTransform extends Transform {
     fracPipeline: GPUComputePipeline;
@@ -38,7 +38,7 @@ export declare class FractureTransform extends Transform {
     bufnewout: GPUBuffer;
     cellProxBuf: GPUBuffer;
     static Create(scene: BABYLON.Scene): Promise<FractureTransform>;
-    transformImpl(original: BABYLON.Mesh): Promise<void>;
+    transformImpl(original: BABYLON.Mesh, hit: BABYLON.PickingInfo): Promise<void>;
     doTransformCopyPerPlane(transform: OM.mat4x4): number;
     doFracture(vertsAsFloat4: Float32Array, transform: OM.mat4x4, pImpact: OM.vec3): Promise<{
         min: OM.vec3;

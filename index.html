@@ -44,10 +44,19 @@
         height: 100%;
         touch-action: none;
       }
+
+      #instruction {
+        position: fixed;
+        font-size: 3vh;
+        color: white;
+        pointer-events: none;
+        user-select: none;
+      }
     </style>
   </head>
   <body>
     <canvas id="renderCanvas"></canvas>
+    <div id=instruction>Click to break!</div>
     <script type="module" src="out/main.js"></script>
   </body>
 </html>

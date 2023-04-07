@@ -5,7 +5,7 @@ import { breadthFirstTraverse } from './util.js';
 async function createScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement) {
   // Setup basic scene
   const scene = new BABYLON.Scene(engine);
-  const camera = new BABYLON.ArcRotateCamera('camera1', -0.5, 1, 20, BABYLON.Vector3.Zero(), scene);
+  const camera = new BABYLON.ArcRotateCamera('camera1', -0.5, 1, 15, BABYLON.Vector3.Zero(), scene);
   camera.lowerRadiusLimit = 5;
   camera.upperRadiusLimit = 200;
   camera.attachControl(canvas, true);
@@ -14,7 +14,7 @@ async function createScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement) {
 
   // Enable physics
   scene.enablePhysics(new BABYLON.Vector3(0, -10, 0), new BABYLON.AmmoJSPlugin(false));
-  scene.getPhysicsEngine()!.setTimeStep(1/60/4); // Slow physics
+  scene.getPhysicsEngine()!.setTimeStep(1 / 60 / 4); // Slow physics
 
   // Create ground collider
   const ground = BABYLON.MeshBuilder.CreateGround(
@@ -56,9 +56,18 @@ async function createScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement) {
   //}
 
   const transformer = await FractureTransform.Create(scene);
-  setTimeout(() => {
-    void transformer.transform(orig);
-  }, 1000);
+
+  scene.onPointerDown = () => {
+    if (!scene.physicsEnabled) return;
+    const ray = scene.createPickingRay(scene.pointerX, scene.pointerY, null, camera, false);
+    const hit = scene.pickWithRay(ray);
+    if (!hit) return;
+
+    const pickedMesh = hit.pickedMesh;
+    if (pickedMesh instanceof BABYLON.Mesh && pickedMesh !== ground) {
+      void transformer.transform(pickedMesh, hit);
+    }
+  };
 
   return scene;
 }
