@@ -326,7 +326,8 @@ export class FractureTransform extends Transform {
       this.dispatchFracture(i, tricount);
       if (i === this.cellBuffers.length - 1) {
         // on the last iteration, before copying to cpu, merge faraway cells
-        //this.dispatchProx(tricount); // TODO: turn this back on, requires mesh colliders
+        // TODO: turn this back on after adding mouse input? kind of requires mesh colliders
+        //this.dispatchProx(tricount);
       }
 
       await this.outputToInput();
