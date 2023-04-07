@@ -250,12 +250,23 @@ export class FractureTransform extends Transform {
       if (fr) {
         fragmentCount++;
         const positions = fr.points.flat(); // TODO: inefficient
-        makeFragmentFromVertices(this.scene, {
+        const mesh = makeFragmentFromVertices(this.scene, {
           original,
           cellIndex: i,
           relCenter: fr.position!,
           positions,
         });
+
+        if (false) {
+          // Apply impulse to fragments near the click point. Doesn't work that great.
+          const clickToFragmentDistance = hit.pickedPoint!.subtract(mesh.position).length();
+          const impulseScalar = 5 / (clickToFragmentDistance + 0.1);
+          console.log(impulseScalar);
+          const impulse = hit.ray!.direction.multiply(new BABYLON.Vector3(impulseScalar));
+          mesh.physicsImpostor!.setLinearVelocity(
+            mesh.physicsImpostor!.getLinearVelocity()!.add(impulse)
+          );
+        }
       }
       await new Promise((res) => requestAnimationFrame(() => res(undefined)));
     }
