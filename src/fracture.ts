@@ -9,6 +9,11 @@ function getShaderModuleForDevice(device: GPUDevice) {
   const existing = shaderModuleForDevice.get(device);
   if (existing) return existing;
   const created = device.createShaderModule({ code: S.kShaderCode });
+  created.getCompilationInfo().then((info) => {
+    for (const m of info.messages) {
+      console.log(m);
+    }
+  });
   shaderModuleForDevice.set(device, created);
   return created;
 }
@@ -434,6 +439,7 @@ export class FractureTransform extends Transform {
         const pass = enc.beginComputePass({ label: 'fracture' });
         pass.setPipeline(this.fracPipeline);
         pass.setBindGroup(0, bindGroup);
+        if (Math.ceil(tricount / S.kFracWorkgroupSize) > 65535) debugger;
         pass.dispatchWorkgroups(Math.ceil(tricount / S.kFracWorkgroupSize));
         pass.end();
       }
@@ -488,12 +494,12 @@ export class FractureTransform extends Transform {
       indices: arrtrioutcells,
       values: arrtriout,
     });
-    //console.log('triout compacted', arrtrioutcells.length, 'to', tricells1.length);
+    console.log('triout compacted', arrtrioutcells.length, 'to', tricells1.length);
     const { indices: newcells, values: news } = floatNcompact(8, {
       indices: arrnewoutcells,
       values: arrnewout,
     });
-    //console.log('newout compacted', arrnewoutcells.length, 'to', newcells.length);
+    console.log('newout compacted', arrnewoutcells.length, 'to', newcells.length);
 
     const { indices: tricells2, values: tris2 } = makeFace(newcells, news);
     this.arrtricells = new Int32Array(tricells1.length + tricells2.length);
