@@ -28,11 +28,15 @@ abstract class Transform {
   }
 
   async transform(original: BABYLON.Mesh): Promise<void> {
-    // Freeze the original in the spot where the new pieces will appear later
-    original.physicsImpostor!.dispose();
-
-    await this.transformImpl(original);
-    original.dispose();
+    // Freeze physics while fracturing. Allows adding in the fragments
+    // incrementally while yielding to the event loop.
+    this.scene.physicsEnabled = false;
+    {
+      this.scene.removeMesh(original);
+      await this.transformImpl(original);
+      original.dispose();
+    }
+    this.scene.physicsEnabled = true;
   }
 
   protected abstract transformImpl(original: BABYLON.Mesh): Promise<void>;
@@ -134,9 +138,12 @@ export class TestTransform extends Transform {
       }
 
       const positions = new Float32Array(outPointsCompacted);
-      const name = `${original.name}.${cell}`;
-      const mesh = makeFragmentFromVertices(this.scene, name, positions);
-      mesh.position.y += 3;
+      makeFragmentFromVertices(this.scene, {
+        original,
+        cellIndex: cell,
+        relCenter: [0, 3, 0],
+        positions,
+      });
     }
     outTriExistsReadback.destroy();
     outPointsReadback.destroy();
@@ -239,12 +246,15 @@ export class FractureTransform extends Transform {
       const fr = fractured[i];
       if (fr) {
         fragmentCount++;
-        const name = `${original.name}.${i}`;
-        const mesh = makeFragmentFromVertices(this.scene, name, fr.points.flat());
-        mesh.position.x = original.position.x + fr.position![0];
-        mesh.position.y = original.position.y + fr.position![1];
-        mesh.position.z = original.position.z + fr.position![2];
+        const positions = fr.points.flat(); // TODO: inefficient
+        makeFragmentFromVertices(this.scene, {
+          original,
+          cellIndex: i,
+          relCenter: fr.position!,
+          positions,
+        });
       }
+      await new Promise((res) => requestAnimationFrame(() => res(undefined)));
     }
     console.log(`created ${fragmentCount} fragments, of ${kFracturePattern.cellCount} possible`);
   }

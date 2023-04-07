@@ -2,7 +2,29 @@
 // will take precedent (and they're not as strict).
 /// <reference types="@webgpu/types" />
 /// <reference types="babylonjs" />
-export function makeFragmentFromVertices(scene, name, positions) {
+export function makeFragmentFromVertices(scene, { original, cellIndex, relCenter, positions, }) {
+    const mesh = new BABYLON.Mesh(`${original.name}.${cellIndex}`, scene);
+    {
+        const vdata = new BABYLON.VertexData();
+        // Set index data to 0,1,2,3,...
+        vdata.indices = [...new Array(positions.length)].map((_, i) => i);
+        vdata.positions = positions;
+        vdata.applyToMesh(mesh);
+    }
+    makeIndependentPhysicsObject(scene, mesh);
+    {
+        const origP = original.physicsImpostor;
+        const meshP = mesh.physicsImpostor;
+        const relCenterB = new BABYLON.Vector3(...relCenter);
+        mesh.position = original.position.add(relCenterB);
+        const origLV = origP.getLinearVelocity();
+        const origAV = origP.getAngularVelocity();
+        meshP.setAngularVelocity(origAV);
+        meshP.setLinearVelocity(origLV.add(origAV.cross(relCenterB)));
+    }
+    return mesh;
+}
+export function makeOriginalFromVertices(scene, name, positions) {
     const mesh = new BABYLON.Mesh(name, scene);
     {
         const vdata = new BABYLON.VertexData();

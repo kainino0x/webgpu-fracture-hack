@@ -1,5 +1,5 @@
 import { FractureTransform } from './fracture.js';
-import { makeFragmentFromVertices } from './helper.js';
+import { makeOriginalFromVertices } from './helper.js';
 async function createScene(engine, canvas) {
     // Setup basic scene
     const scene = new BABYLON.Scene(engine);
@@ -29,19 +29,19 @@ async function createScene(engine, canvas) {
         1, 1, 1, -1, 1, 1, -1, 1, -1,
         1, 1, 1, 1, -1, 1, -1, 1, 1,
     ]);
-    const cube = makeFragmentFromVertices(scene, 'cube', cubePositions);
-    cube.position.y += 1;
-    cube.rotate(new BABYLON.Vector3(1, 1, 1), 1);
-    cube.physicsImpostor.setLinearVelocity(new BABYLON.Vector3(0, 5, 0));
-    cube.physicsImpostor.setAngularVelocity(new BABYLON.Vector3(0, 4, 0));
+    const orig = makeOriginalFromVertices(scene, 'cube', cubePositions);
+    orig.position.y += 1;
+    orig.rotate(new BABYLON.Vector3(1, 1, 1), 1);
+    orig.physicsImpostor.setLinearVelocity(new BABYLON.Vector3(0, 5, 0));
+    orig.physicsImpostor.setAngularVelocity(new BABYLON.Vector3(0, 4, 0));
     //for (const node of breadthFirstTraverse(cube)) {
     //  if (node.value instanceof GPUBuffer) {
     //    console.log('found GPUBuffer at cube.' + node.path.join('.'));
     //  }
     //}
-    const fractureTransform = await FractureTransform.Create(scene);
+    const transformer = await FractureTransform.Create(scene);
     setTimeout(() => {
-        void fractureTransform.transform(cube);
+        void transformer.transform(orig);
     }, 1000);
     return scene;
 }
