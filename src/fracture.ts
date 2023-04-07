@@ -312,7 +312,7 @@ export class FractureTransform extends Transform {
       this.dispatchFracture(i, tricount);
       if (i === this.cellBuffers.length - 1) {
         // on the last iteration, before copying to cpu, merge faraway cells
-        //this.dispatchProx(tricount); // TODO: turn this back on
+        //this.dispatchProx(tricount); // TODO: turn this back on, requires mesh colliders
       }
 
       await this.outputToInput();
@@ -373,9 +373,11 @@ export class FractureTransform extends Transform {
 
   dispatchFracture(iteration: number, tricount: number) {
     if (iteration > 0) {
+      assert(tricount === this.arrtricells.length);
       this.buftricells = this.makeBufferWithData(this.arrtricells, {
         usage: GPUBufferUsage.STORAGE,
       });
+      assert(tricount * 12 === this.arrtris.length);
       this.buftris = this.makeBufferWithData(this.arrtris, {
         usage: GPUBufferUsage.STORAGE,
       });
@@ -494,12 +496,12 @@ export class FractureTransform extends Transform {
       indices: arrtrioutcells,
       values: arrtriout,
     });
-    console.log('triout compacted', arrtrioutcells.length, 'to', tricells1.length);
+    //console.log('triout compacted', arrtrioutcells.length, 'to', tricells1.length);
     const { indices: newcells, values: news } = floatNcompact(8, {
       indices: arrnewoutcells,
       values: arrnewout,
     });
-    console.log('newout compacted', arrnewoutcells.length, 'to', newcells.length);
+    //console.log('newout compacted', arrnewoutcells.length, 'to', newcells.length);
 
     const { indices: tricells2, values: tris2 } = makeFace(newcells, news);
     this.arrtricells = new Int32Array(tricells1.length + tricells2.length);
@@ -558,6 +560,7 @@ function makeBufferFromData(device: GPUDevice, data: TypedArrayBufferView): GPUB
 }
 
 function floatNcompact(N: number, input: { indices: Int32Array; values: Float32Array }) {
+  assert(input.indices.length * N === input.values.length);
   let indicesCount = 0;
   for (let i = 0; i < input.indices.length; i++) {
     if (input.indices[i] !== -1) {
@@ -604,9 +607,8 @@ function makeFace(indices: Int32Array, points: Float32Array) {
   }
 
   const idxout = new Int32Array(indices.length);
-  const values = new Float32Array(indices.length * 9);
+  const values = new Float32Array(indices.length * 12);
   let i_idxout = 0;
-  let i_values = 0;
   for (let iface = 0; iface < faces.length; iface++) {
     const f = faces[iface];
     if (!f) {
@@ -622,9 +624,8 @@ function makeFace(indices: Int32Array, points: Float32Array) {
     // Create a tri from the centroid and the two points on each edge
     for (let i = 0; i < f.length; i++) {
       idxout[i_idxout] = iface;
+      values.set([...centr, 1, ...f[i][0], 1, ...f[i][1], 1], i_idxout * 12);
       i_idxout++;
-      values.set([...centr, ...f[i][0], ...f[i][1]], i_values);
-      i_values += 9;
     }
   }
 

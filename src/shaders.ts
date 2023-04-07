@@ -4,7 +4,7 @@ export namespace Shaders {
   export const kFracConfigSize = roundUp(24, 16);
   export const kCopyConfigSize = roundUp(16 * 4 + 4 + 4, 16);
   export const kProxConfigSize = 4;
-  export const kCopyWorkgroupSize = 32; // TODO: increase these
+  export const kCopyWorkgroupSize = 32;
   export const kProxWorkgroupSize = 32;
   export const kFracWorkgroupSize = 32;
   export const kShaderCode = /* wgsl */ `
@@ -14,7 +14,7 @@ export namespace Shaders {
 @group(0) @binding(2) var<storage, read_write> outTriExists: array<u32>;
 @group(0) @binding(3) var<storage, read_write> outPoints: array<f32>;
 
-@compute @workgroup_size(1) // TODO: increase
+@compute @workgroup_size(1)
 fn testTransform(
   @builtin(global_invocation_id) outTriIdxXYZ: vec3<u32>,
 ) {
@@ -126,9 +126,9 @@ fn fracture(@builtin(global_invocation_id) gid: vec3<u32>) {
     // move the plane into local coordinate system.
     let pd = _pla.w + dot(pN, frac_config.fracCenter);
     let pP = vec4(0, 0, -pd / pN.z, 0); // Arbitrarily calculate a point on the plane (z-axis intersection)
+
     let tri = tris[index];
 
-    // TODO(sic): perform plane-triangle clip
     var cull1 = dot(pN, tri.a - pP) < 0;
     var cull2 = dot(pN, tri.b - pP) < 0;
     var cull3 = dot(pN, tri.c - pP) < 0;

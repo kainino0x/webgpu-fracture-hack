@@ -32,7 +32,7 @@ export function makeIndependentPhysicsObject(scene: BABYLON.Scene, mesh: BABYLON
   mesh.setParent(null);
   mesh.physicsImpostor = new BABYLON.PhysicsImpostor(
     mesh,
-    BABYLON.PhysicsImpostor.ConvexHullImpostor, // Or MeshImpostor?
+    BABYLON.PhysicsImpostor.ConvexHullImpostor, // Or MeshImpostor? needed if using the prox kernel
     { mass: 1.0 },
     scene
   );

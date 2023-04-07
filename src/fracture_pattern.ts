@@ -1,6 +1,6 @@
 // Dumped at runtime from https://github.com/kainino0x/cis565final
 export const kFracturePattern = {
-  cellCount: 4, // FIXME: change back to 50
+  cellCount: 50,
   // For each cell, is it proximate to the fracture point? If no, the resulting fragment will be
   // welded to all other non-proximate fragments.
   cellProx: new Uint32Array([

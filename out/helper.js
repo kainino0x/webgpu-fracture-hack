@@ -22,7 +22,7 @@ export function makeIndependentPhysicsObject(scene, mesh) {
         material.backFaceCulling = false;
     }
     mesh.setParent(null);
-    mesh.physicsImpostor = new BABYLON.PhysicsImpostor(mesh, BABYLON.PhysicsImpostor.ConvexHullImpostor, // Or MeshImpostor?
+    mesh.physicsImpostor = new BABYLON.PhysicsImpostor(mesh, BABYLON.PhysicsImpostor.ConvexHullImpostor, // Or MeshImpostor? needed if using the prox kernel
     { mass: 1.0 }, scene);
     mesh.material = material;
 }
