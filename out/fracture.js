@@ -25,6 +25,8 @@ class Transform {
         this.device = scene.getEngine()._device;
     }
     async transform(original) {
+        // Freeze the original in the spot where the new pieces will appear later
+        original.physicsImpostor.dispose();
         await this.transformImpl(original);
         original.dispose();
     }
@@ -203,8 +205,9 @@ export class FractureTransform extends Transform {
                 fragmentCount++;
                 const name = `${original.name}.${i}`;
                 const mesh = makeFragmentFromVertices(this.scene, name, fr.points.flat());
-                // TODO: give the fragment the correct transform
-                mesh.position.y += 3;
+                mesh.position.x = original.position.x + fr.position[0];
+                mesh.position.y = original.position.y + fr.position[1];
+                mesh.position.z = original.position.z + fr.position[2];
             }
         }
         console.log(`created ${fragmentCount} fragments, of ${kFracturePattern.cellCount} possible`);

@@ -6,12 +6,14 @@ async function createScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement) {
   // Setup basic scene
   const scene = new BABYLON.Scene(engine);
   const camera = new BABYLON.ArcRotateCamera('camera1', -0.5, 1, 20, BABYLON.Vector3.Zero(), scene);
+  camera.lowerRadiusLimit = 0;
   camera.attachControl(canvas, true);
   const light = new BABYLON.HemisphericLight('light1', new BABYLON.Vector3(0, 1, 0), scene);
   light.intensity = 0.7;
 
   // Enable physics
-  scene.enablePhysics(new BABYLON.Vector3(0, -10, 0), new BABYLON.AmmoJSPlugin());
+  scene.enablePhysics(new BABYLON.Vector3(0, -10, 0), new BABYLON.AmmoJSPlugin(false));
+  scene.getPhysicsEngine()!.setTimeStep(1/120); // Half speed physics
 
   // Create ground collider
   const ground = BABYLON.MeshBuilder.CreateGround(
@@ -42,8 +44,10 @@ async function createScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement) {
      1, 1, 1,    1,-1, 1,   -1, 1, 1,
   ]);
   const cube = makeFragmentFromVertices(scene, 'cube', cubePositions);
-  cube.position.y += 3;
-  cube.physicsImpostor!.setLinearVelocity(new BABYLON.Vector3(0.5, 0.5, 0.5));
+  cube.position.y += 1;
+  cube.rotate(new BABYLON.Vector3(1, 1, 1), 1);
+  cube.physicsImpostor!.setLinearVelocity(new BABYLON.Vector3(0, 5, 0));
+  cube.physicsImpostor!.setAngularVelocity(new BABYLON.Vector3(0, 4, 0));
   //for (const node of breadthFirstTraverse(cube)) {
   //  if (node.value instanceof GPUBuffer) {
   //    console.log('found GPUBuffer at cube.' + node.path.join('.'));
