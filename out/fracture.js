@@ -246,7 +246,7 @@ export class FractureTransform extends Transform {
         });
         {
             const config = new ArrayBuffer(S.kCopyConfigSize);
-            const configi = new Int32Array(config);
+            const configi = new Uint32Array(config);
             const configf = new Float32Array(config);
             configf.set(transform, 0); // 16 floats
             configi[16] = kFracturePattern.cellCount;
@@ -363,7 +363,7 @@ export class FractureTransform extends Transform {
         });
         {
             const config = new ArrayBuffer(S.kFracConfigSize);
-            const configi = new Int32Array(config);
+            const configi = new Uint32Array(config);
             const configf = new Float32Array(config);
             configf.set(this.fractureCenter, 0); // 4 floats
             configi[4] = kFracturePattern.cellCount;
@@ -431,9 +431,9 @@ export class FractureTransform extends Transform {
     async outputToInput() {
         this.buftris.destroy();
         const [arrtrioutcells, arrtriout, arrnewoutcells, arrnewout] = await Promise.all([
-            this.readbackBuffer(this.buftrioutcells).then((ab) => new Int32Array(ab)),
+            this.readbackBuffer(this.buftrioutcells).then((ab) => new Uint32Array(ab)),
             this.readbackBuffer(this.buftriout).then((ab) => new Float32Array(ab)),
-            this.readbackBuffer(this.bufnewoutcells).then((ab) => new Int32Array(ab)),
+            this.readbackBuffer(this.bufnewoutcells).then((ab) => new Uint32Array(ab)),
             this.readbackBuffer(this.bufnewout).then((ab) => new Float32Array(ab)),
         ]);
         this.buftrioutcells.destroy();
@@ -451,7 +451,7 @@ export class FractureTransform extends Transform {
         });
         //console.log('newout compacted', arrnewoutcells.length, 'to', newcells.length);
         const { indices: tricells2, values: tris2 } = makeFace(newcells, news);
-        this.arrtricells = new Int32Array(tricells1.length + tricells2.length);
+        this.arrtricells = new Uint32Array(tricells1.length + tricells2.length);
         this.arrtricells.set(tricells1);
         this.arrtricells.set(tricells2, tricells1.length);
         this.arrtris = new Float32Array(tris1.length + tris2.length);
@@ -501,17 +501,17 @@ function floatNcompact(N, input) {
     assert(input.indices.length * N === input.values.length);
     let indicesCount = 0;
     for (let i = 0; i < input.indices.length; i++) {
-        if (input.indices[i] !== -1) {
+        if (input.indices[i] !== 0) {
             indicesCount++;
         }
     }
     const out = {
-        indices: new Int32Array(indicesCount),
+        indices: new Uint32Array(indicesCount),
         values: new Float32Array(indicesCount * N),
     };
     let iOut = 0;
     for (let iIn = 0; iIn < input.indices.length; iIn++) {
-        if (input.indices[iIn] !== -1) {
+        if (input.indices[iIn] !== 0) {
             out.indices[iOut] = input.indices[iIn];
             memcpy({ src: input.values, start: iIn * N, length: N }, { dst: out.values, start: iOut * N });
             //for (let n = 0; n < N; n++) {
@@ -535,7 +535,7 @@ function makeFace(indices, points) {
         const p2 = [points[i * 8 + 4], points[i * 8 + 5], points[i * 8 + 6]];
         f.push([p1, p2]);
     }
-    const idxout = new Int32Array(indices.length);
+    const idxout = new Uint32Array(indices.length);
     const values = new Float32Array(indices.length * 12);
     let i_idxout = 0;
     for (let iface = 0; iface < faces.length; iface++) {
@@ -555,6 +555,6 @@ function makeFace(indices, points) {
             i_idxout++;
         }
     }
-    return { indices: new Int32Array(idxout), values: new Float32Array(values) };
+    return { indices: new Uint32Array(idxout), values: new Float32Array(values) };
 }
 //# sourceMappingURL=fracture.js.map

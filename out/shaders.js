@@ -33,6 +33,8 @@ fn testTransform(
 
 //// fracture transform
 
+const kNoCell = 0u;
+const kProxCell = 1u;
 struct Tri { a: vec4f, b: vec4f, c: vec4f }
 
 // transformCopyPerPlane
@@ -43,7 +45,7 @@ struct CopyConfig {
   tricount: u32,
 }
 @group(0) @binding(0) var<uniform> copy_config: CopyConfig;
-@group(0) @binding(3) var<storage, read_write> copy_tricells: array<i32>; // size planecount*tricount
+@group(0) @binding(3) var<storage, read_write> copy_tricells: array<u32>; // size planecount*tricount
 @group(0) @binding(4) var<storage, read_write> copy_tris:     array<Tri>; // size planecount*tricount
 
 @compute @workgroup_size(${Shaders.kCopyWorkgroupSize})
@@ -57,7 +59,8 @@ fn transformCopyPerPlane(@builtin(global_invocation_id) gid: vec3<u32>) {
   t.c = copy_config.transform * t.c;
 
   for (var i_plane = 0u; i_plane < copy_config.planecount; i_plane++) {
-    copy_tricells[i_plane * copy_config.tricount + i_tri] = i32(i_plane);
+    // add 2 to reserve 0 and 1 for kNoCell and kProxCell.
+    copy_tricells[i_plane * copy_config.tricount + i_tri] = i_plane + 2;
     copy_tris    [i_plane * copy_config.tricount + i_tri] = t;
   }
 }
@@ -67,7 +70,7 @@ fn transformCopyPerPlane(@builtin(global_invocation_id) gid: vec3<u32>) {
 @group(0) @binding(0) var<storage, read> prox_prox: array<u32>; // true/false proximate per cell
 struct ProxConfig { tricount: u32 }
 @group(0) @binding(1) var<uniform> prox_config: ProxConfig;
-@group(0) @binding(2) var<storage, read_write> prox_tricells: array<i32>; // modified in place
+@group(0) @binding(2) var<storage, read_write> prox_tricells: array<u32>; // modified in place
 
 @compute @workgroup_size(${Shaders.kProxWorkgroupSize})
 fn applyProximity(@builtin(global_invocation_id) gid: vec3<u32>) {
@@ -75,8 +78,8 @@ fn applyProximity(@builtin(global_invocation_id) gid: vec3<u32>) {
   if i_tri >= prox_config.tricount { return; }
 
   let c = prox_tricells[i_tri];
-  if c != -1 && prox_prox[c] == 0 {
-    prox_tricells[i_tri] = -2; // -1 means delete, -2 doesn't!
+  if c != kNoCell && prox_prox[c] == 0 {
+    prox_tricells[i_tri] = kProxCell;
   }
 }
 
@@ -89,11 +92,11 @@ struct FracConfig {
 }
 @group(0) @binding(0) var<uniform> frac_config: FracConfig;
 @group(0) @binding(1) var<storage, read>       planes:    array<vec4f>; // size planecount, each Nx Ny Nz d
-@group(0) @binding(3) var<storage, read>       tricells:    array<i32>; // size tricount
+@group(0) @binding(3) var<storage, read>       tricells:    array<u32>; // size tricount
 @group(0) @binding(4) var<storage, read>       tris:        array<Tri>; // size tricount
-@group(0) @binding(5) var<storage, read_write> trioutcells: array<i32>; // size tricount*2
+@group(0) @binding(5) var<storage, read_write> trioutcells: array<u32>; // size tricount*2
 @group(0) @binding(6) var<storage, read_write> triout:      array<Tri>; // size tricount*2
-@group(0) @binding(7) var<storage, read_write> newoutcells: array<i32>; // size tricount
+@group(0) @binding(7) var<storage, read_write> newoutcells: array<u32>; // size tricount
 struct Edge { a: vec4f, b: vec4f }
 @group(0) @binding(8) var<storage, read_write> newout:     array<Edge>; // size tricount
 
@@ -108,9 +111,9 @@ fn fracture(@builtin(global_invocation_id) gid: vec3<u32>) {
     // The following makes this kernel a no-op; i.e., each of
     // the 50 fracture pieces will be a copy of the original mesh.
     trioutcells[2 * index] = tricells[index];
-    trioutcells[2 * index + 1] = -1;
+    trioutcells[2 * index + 1] = kNoCell;
     triout[2 * index] = tris[index];
-    newoutcells[index] = -1;
+    newoutcells[index] = kNoCell;
   } else {
     let cell = tricells[index];
     let _pla = planes[cell];
@@ -118,8 +121,8 @@ fn fracture(@builtin(global_invocation_id) gid: vec3<u32>) {
       // this cell doesn't have a plane on this iteration; do nothing
       trioutcells[2 * index] = cell;
       triout[2 * index] = tris[index];
-      trioutcells[2 * index + 1] = -1;
-      newoutcells[index] = -1;
+      trioutcells[2 * index + 1] = kNoCell;
+      newoutcells[index] = kNoCell;
       return;
     }
     let pN = vec4(_pla.xyz, 0);
@@ -171,13 +174,13 @@ fn fracture(@builtin(global_invocation_id) gid: vec3<u32>) {
     var newTri1 = tri;    // current triangle.
     var newTri2 = Tri();
     var cell1 = cell;     // cell of the current face.
-    var cell2 = -1;       // cell of the new face.
-    var cellP = -1;       // cell of the new points (for newoutcells).
+    var cell2 = kNoCell;       // cell of the new face.
+    var cellP = kNoCell;       // cell of the new points (for newoutcells).
     var newP1: vec4f;     // new points.
     var newP2: vec4f;
 
     if cull3 {  // if all 3 points are culled, do nothing.  Output is -1
-      cell1 = -1;
+      cell1 = kNoCell;
     } else if !cull1 {  // if all 3 points are not culled, add to output normally.
       // do nothing.
     } else if !cull2 {  // XOR: if only one point is culled (p1), needs new face, add both to output

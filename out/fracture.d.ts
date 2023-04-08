@@ -28,7 +28,7 @@ export declare class FractureTransform extends Transform {
     proxConfig: GPUBuffer;
     fractureCenter: Float32Array;
     cellBuffers: GPUBuffer[];
-    arrtricells: Int32Array;
+    arrtricells: Uint32Array;
     arrtris: Float32Array;
     buftricells: GPUBuffer;
     buftris: GPUBuffer;

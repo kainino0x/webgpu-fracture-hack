@@ -167,7 +167,7 @@ export class FractureTransform extends Transform {
   fractureCenter!: Float32Array;
   cellBuffers!: GPUBuffer[];
 
-  arrtricells!: Int32Array;
+  arrtricells!: Uint32Array;
   arrtris!: Float32Array;
   buftricells!: GPUBuffer;
   buftris!: GPUBuffer;
@@ -289,7 +289,7 @@ export class FractureTransform extends Transform {
 
     {
       const config = new ArrayBuffer(S.kCopyConfigSize);
-      const configi = new Int32Array(config);
+      const configi = new Uint32Array(config);
       const configf = new Float32Array(config);
 
       configf.set(transform, 0); // 16 floats
@@ -435,7 +435,7 @@ export class FractureTransform extends Transform {
 
     {
       const config = new ArrayBuffer(S.kFracConfigSize);
-      const configi = new Int32Array(config);
+      const configi = new Uint32Array(config);
       const configf = new Float32Array(config);
 
       configf.set(this.fractureCenter, 0); // 4 floats
@@ -511,9 +511,9 @@ export class FractureTransform extends Transform {
     this.buftris.destroy();
 
     const [arrtrioutcells, arrtriout, arrnewoutcells, arrnewout] = await Promise.all([
-      this.readbackBuffer(this.buftrioutcells).then((ab) => new Int32Array(ab)),
+      this.readbackBuffer(this.buftrioutcells).then((ab) => new Uint32Array(ab)),
       this.readbackBuffer(this.buftriout).then((ab) => new Float32Array(ab)),
-      this.readbackBuffer(this.bufnewoutcells).then((ab) => new Int32Array(ab)),
+      this.readbackBuffer(this.bufnewoutcells).then((ab) => new Uint32Array(ab)),
       this.readbackBuffer(this.bufnewout).then((ab) => new Float32Array(ab)),
     ]);
     this.buftrioutcells.destroy();
@@ -533,7 +533,7 @@ export class FractureTransform extends Transform {
     //console.log('newout compacted', arrnewoutcells.length, 'to', newcells.length);
 
     const { indices: tricells2, values: tris2 } = makeFace(newcells, news);
-    this.arrtricells = new Int32Array(tricells1.length + tricells2.length);
+    this.arrtricells = new Uint32Array(tricells1.length + tricells2.length);
     this.arrtricells.set(tricells1);
     this.arrtricells.set(tricells2, tricells1.length);
     this.arrtris = new Float32Array(tris1.length + tris2.length);
@@ -588,22 +588,22 @@ function makeBufferFromData(device: GPUDevice, data: TypedArrayBufferView): GPUB
   return buffer;
 }
 
-function floatNcompact(N: number, input: { indices: Int32Array; values: Float32Array }) {
+function floatNcompact(N: number, input: { indices: Uint32Array; values: Float32Array }) {
   assert(input.indices.length * N === input.values.length);
   let indicesCount = 0;
   for (let i = 0; i < input.indices.length; i++) {
-    if (input.indices[i] !== -1) {
+    if (input.indices[i] !== 0) {
       indicesCount++;
     }
   }
 
   const out = {
-    indices: new Int32Array(indicesCount),
+    indices: new Uint32Array(indicesCount),
     values: new Float32Array(indicesCount * N),
   };
   let iOut = 0;
   for (let iIn = 0; iIn < input.indices.length; iIn++) {
-    if (input.indices[iIn] !== -1) {
+    if (input.indices[iIn] !== 0) {
       out.indices[iOut] = input.indices[iIn];
       memcpy(
         { src: input.values, start: iIn * N, length: N },
@@ -618,7 +618,7 @@ function floatNcompact(N: number, input: { indices: Int32Array; values: Float32A
   return out;
 }
 
-function makeFace(indices: Int32Array, points: Float32Array) {
+function makeFace(indices: Uint32Array, points: Float32Array) {
   type Edge = [OM.vec3, OM.vec3];
   type Face = Edge[]; // represent each face as a list of edges
   const faces: Face[] = [];
@@ -635,7 +635,7 @@ function makeFace(indices: Int32Array, points: Float32Array) {
     f.push([p1, p2]);
   }
 
-  const idxout = new Int32Array(indices.length);
+  const idxout = new Uint32Array(indices.length);
   const values = new Float32Array(indices.length * 12);
   let i_idxout = 0;
   for (let iface = 0; iface < faces.length; iface++) {
@@ -658,5 +658,5 @@ function makeFace(indices: Int32Array, points: Float32Array) {
     }
   }
 
-  return { indices: new Int32Array(idxout), values: new Float32Array(values) };
+  return { indices: new Uint32Array(idxout), values: new Float32Array(values) };
 }

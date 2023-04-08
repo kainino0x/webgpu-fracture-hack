@@ -15,7 +15,7 @@ export function roundUp(n: number, alignment: number): number {
 
 export type TypedArrayBufferView =
   // expand as needed
-  Float32Array | Uint8Array | Int32Array | Uint32Array;
+  Float32Array | Uint8Array | Uint32Array;
 
 function subarrayAsU8(
   buf: ArrayBuffer | TypedArrayBufferView,
