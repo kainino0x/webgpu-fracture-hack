@@ -6,21 +6,6 @@
 
     <title>Fracture</title>
 
-    <script>
-      const orig = GPUAdapter.prototype.requestDevice;
-      GPUAdapter.prototype.requestDevice = function(desc) {
-        desc = {
-          ...desc,
-          requiredLimits: {
-            ...desc.requiredLimits,
-            maxBufferSize: this.limits.maxBufferSize,
-            maxStorageBufferBindingSize: this.limits.maxStorageBufferBindingSize,
-          },
-        };
-        return orig.apply(this, arguments);
-      }
-    </script>
-
     <!-- Babylon.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.2/dat.gui.min.js"></script>
     <script src="https://cdn.babylonjs.com/v5.52.0/ammo.js"></script>
