@@ -7,6 +7,8 @@ This is a port of a CIS565 final project by Jiatong He and myself:
 > 
 > Jiatong He, Kai Ninomiya
 
+**This project is wholly unsupported. It is a hackathon port of a school project, so please set your expectations appropriately low.**
+
 ## Live @ [kai.graphics/webgpu-fracture-hack](https://kai.graphics/webgpu-fracture-hack/)
 
 Works in Chrome 113 on Mac/Windows (in beta; stable release May 2023).
@@ -17,9 +19,7 @@ but I expect it to work pretty soon!
 
 ![screenshot of 31 fragments of a cube flying through the air](./screenshot.png)
 
-**This is a hackathon port of a school project, so set your expectations appropriately low.**
-
-It ports:
+This project ports:
 
 - From WebCL to WebGPU
 - From OpenCL C to WGSL
