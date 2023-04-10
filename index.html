@@ -30,18 +30,24 @@
         touch-action: none;
       }
 
-      #instruction {
+      .text {
+        display: block;
         position: fixed;
         font-size: 3vh;
         color: white;
-        pointer-events: none;
         user-select: none;
+      }
+
+      .upper-left {
+        right: 0;
       }
     </style>
   </head>
   <body>
     <canvas id="renderCanvas"></canvas>
-    <div id=instruction>Click to break!</div>
+    <div class=text>Click to break!</div>
+    <a class="text upper-left" target="_blank"
+      href="https://github.com/kainino0x/webgpu-fracture-hack">GitHub!</a>
     <script type="module" src="out/main.js"></script>
   </body>
 </html>
