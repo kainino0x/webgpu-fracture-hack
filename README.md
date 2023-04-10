@@ -9,8 +9,11 @@ This is a port of a CIS565 final project by Jiatong He and myself:
 
 ## Live @ [kai.graphics/webgpu-fracture-hack](https://kai.graphics/webgpu-fracture-hack/)
 
-Works in Chrome 113 (in beta; stable release May 2023).
-Unfortunately, Babylon.js does not yet work in Firefox Nightly.
+Works in Chrome 113 on Mac/Windows (in beta; stable release May 2023).
+Also works in Chrome Canary on Android, and Chrome Dev on *some* linux systems, with `chrome://flags#enable-unsafe-webgpu`.
+
+Unfortunately, Babylon.js does not yet work in Firefox Nightly at the time of this writing,
+but I expect it to work pretty soon!
 
 ![screenshot of 31 fragments of a cube flying through the air](./screenshot.png)
 
