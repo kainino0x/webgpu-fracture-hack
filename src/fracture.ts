@@ -9,11 +9,6 @@ function getShaderModuleForDevice(device: GPUDevice) {
   const existing = shaderModuleForDevice.get(device);
   if (existing) return existing;
   const created = device.createShaderModule({ code: S.kShaderCode });
-  created.getCompilationInfo().then((info) => {
-    for (const m of info.messages) {
-      console.log(m);
-    }
-  });
   shaderModuleForDevice.set(device, created);
   return created;
 }
