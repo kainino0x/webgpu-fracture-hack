@@ -389,8 +389,6 @@ export class FractureTransform extends Transform {
                 const pass = enc.beginComputePass({ label: 'fracture' });
                 pass.setPipeline(this.fracPipeline);
                 pass.setBindGroup(0, bindGroup);
-                if (Math.ceil(tricount / S.kFracWorkgroupSize) > 65535)
-                    debugger;
                 pass.dispatchWorkgroups(Math.ceil(tricount / S.kFracWorkgroupSize));
                 pass.end();
             }

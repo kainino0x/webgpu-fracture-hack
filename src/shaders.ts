@@ -35,6 +35,7 @@ fn testTransform(
 
 const kNoCell = 0u;
 const kProxCell = 1u;
+const kPatternStart = 2u;
 struct Tri { a: vec4f, b: vec4f, c: vec4f }
 
 // transformCopyPerPlane
@@ -116,7 +117,8 @@ fn fracture(@builtin(global_invocation_id) gid: vec3<u32>) {
     newoutcells[index] = kNoCell;
   } else {
     let cell = tricells[index];
-    let _pla = planes[cell];
+    let planeIdx = cell - kPatternStart;
+    let _pla = planes[planeIdx];
     if all(_pla.xyz == vec3(0, 0, 0)) {
       // this cell doesn't have a plane on this iteration; do nothing
       trioutcells[2 * index] = cell;
